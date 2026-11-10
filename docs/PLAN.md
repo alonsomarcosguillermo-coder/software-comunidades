@@ -31,8 +31,12 @@ tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizad
   Hecho: `fincas.servicios.repartir` (resto mayor, cuentas exactas con `Fraction`, empates por
   clave, admite coeficientes que no suman 100 e importes negativos). Propiedades con
   hypothesis: suma exacta, error < 1 céntimo, monotonía, determinismo y simetría de signo.
-- ⬜ **T1.4** App `contabilidad`: `Cuenta`, `Asiento`, `Apunte`. Debe = Haber en cada asiento;
+- ✅ **T1.4** App `contabilidad`: `Cuenta`, `Asiento`, `Apunte`. Debe = Haber en cada asiento;
   asientos inmutables; saldo calculado. Contra-asiento para anular.
+  Hecho: `contabilidad.registro.registrar_asiento` / `anular_asiento` (numeración correlativa
+  por comunidad); cuadre puro en `servicios.comprobar_cuadre`; inmutabilidad en Python y con
+  triggers de PostgreSQL (migración 0002, ADR 003); `Cuenta.saldo(hasta=)`. Admin: cuentas con
+  saldo; asientos solo lectura.
 - ⬜ **T1.5** Plantilla base HTML + HTMX + login. Lista de comunidades del despacho.
 - ⬜ **T1.6** Datos de ejemplo: comando `manage.py cargar_demo` con un despacho, 2 comunidades
   y vecinos ficticios.
@@ -62,7 +66,14 @@ tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizad
 
 ## Ideas / deuda técnica
 - El admin de Django no filtra por despacho: si algún día lo usan empleados (no solo el
-  superusuario), habrá que restringir sus querysets o retirarles el acceso.
+  superusuario), habrá que restringir sus querysets o retirarles el acceso. Comprobado con
+  usuarios de demo: `admin.alfa` ve las comunidades de Fincas Beta en el admin.
+- Contabilidad: el trigger de cuadre no impide añadir, más tarde, un par de apuntes que
+  cuadren a un asiento ya existente (los apuntes nuevos sí deben ir con `registrar_asiento`).
+- Contabilidad: falta un plan de cuentas por defecto al crear una comunidad (572, 430, 6xx,
+  7xx...) y el tipo de cuenta (activo, pasivo, gasto, ingreso) para informes. Probablemente
+  en T2.1/T2.2.
+- Contabilidad: no hay ejercicios ni cierre; no se impide registrar asientos con fecha pasada.
 - `config/urls.py` conserva el docstring en inglés generado por Django.
 - R-COEF-01 solo se exige al editar la comunidad en el admin. Cuando haya vistas o importación
   de inmuebles (T1.5, T1.6), usar `comprobar_coeficientes` también ahí; y T2.2 (emitir cuotas)
