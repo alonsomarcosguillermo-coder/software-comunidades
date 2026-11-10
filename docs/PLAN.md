@@ -16,8 +16,10 @@ tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizad
   Pendiente del usuario: `manage.py createsuperuser` (pide contraseña) y entrar en `/admin`.
 
 ## Fase 1 — Núcleo (secuencial: todo lo demás depende de esto)
-- ⬜ **T1.1** `Despacho` y relación `Usuario` → `Despacho`. Helper/mixin que filtra por despacho.
+- ✅ **T1.1** `Despacho` y relación `Usuario` → `Despacho`. Helper/mixin que filtra por despacho.
   Terminado: test de aislamiento (usuario del despacho A no ve datos de B).
+  Hecho: `core.Despacho`, `Usuario.despacho` (FK opcional, PROTECT), `core/aislamiento.py`
+  (`filtrar_por_despacho` + `FiltradoPorDespachoMixin`, fallan cerradas), admin, ADR 002.
 - ⬜ **T1.2** App `fincas`: `Comunidad` (pertenece a un despacho), `Inmueble` (tipo, referencia,
   coeficiente), `Propietario`, titularidad. Validación `R-COEF-01`. Admin de Django configurado.
 - ⬜ **T1.3** Servicio de reparto `repartir(importe, coeficientes)` con `R-REP-02`. Tests con
@@ -52,4 +54,6 @@ tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizad
 - ⬜ **T5.3** GitHub + CI (GitHub Actions con PostgreSQL de servicio).
 
 ## Ideas / deuda técnica
-- (vacío)
+- El admin de Django no filtra por despacho: si algún día lo usan empleados (no solo el
+  superusuario), habrá que restringir sus querysets o retirarles el acceso.
+- `config/urls.py` conserva el docstring en inglés generado por Django.
