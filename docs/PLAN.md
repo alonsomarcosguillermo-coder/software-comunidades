@@ -20,8 +20,12 @@ tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizad
   Terminado: test de aislamiento (usuario del despacho A no ve datos de B).
   Hecho: `core.Despacho`, `Usuario.despacho` (FK opcional, PROTECT), `core/aislamiento.py`
   (`filtrar_por_despacho` + `FiltradoPorDespachoMixin`, fallan cerradas), admin, ADR 002.
-- ⬜ **T1.2** App `fincas`: `Comunidad` (pertenece a un despacho), `Inmueble` (tipo, referencia,
+- ✅ **T1.2** App `fincas`: `Comunidad` (pertenece a un despacho), `Inmueble` (tipo, referencia,
   coeficiente), `Propietario`, titularidad. Validación `R-COEF-01`. Admin de Django configurado.
+  Hecho: coeficiente en % con 4 decimales; `fincas.servicios.comprobar_coeficientes` (pura);
+  la suma = 100 se exige en bloque al guardar la comunidad en el admin (inmuebles en línea).
+  `Propietario` cuelga del despacho (NIF único por despacho). `Titularidad` con fechas
+  (histórico, cotitulares, sin solapes, mismo despacho). `fincas.models.CAMPO_DESPACHO`.
 - ⬜ **T1.3** Servicio de reparto `repartir(importe, coeficientes)` con `R-REP-02`. Tests con
   hypothesis: la suma siempre cuadra al céntimo.
 - ⬜ **T1.4** App `contabilidad`: `Cuenta`, `Asiento`, `Apunte`. Debe = Haber en cada asiento;
@@ -57,3 +61,9 @@ tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizad
 - El admin de Django no filtra por despacho: si algún día lo usan empleados (no solo el
   superusuario), habrá que restringir sus querysets o retirarles el acceso.
 - `config/urls.py` conserva el docstring en inglés generado por Django.
+- R-COEF-01 solo se exige al editar la comunidad en el admin. Cuando haya vistas o importación
+  de inmuebles (T1.5, T1.6), usar `comprobar_coeficientes` también ahí; y T2.2 (emitir cuotas)
+  debe negarse si `Comunidad.coeficientes_cuadran()` es falso.
+- Pregunta pendiente para `DOMINIO.md`: ¿la titularidad necesita % de propiedad (proindiviso)
+  y un representante por inmueble para votar (art. 15.1 LPH)? De momento no se modela.
+- Validación de formato del NIF/NIE (letra de control): no implementada.
