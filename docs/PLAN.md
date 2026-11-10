@@ -26,8 +26,11 @@ tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizad
   la suma = 100 se exige en bloque al guardar la comunidad en el admin (inmuebles en línea).
   `Propietario` cuelga del despacho (NIF único por despacho). `Titularidad` con fechas
   (histórico, cotitulares, sin solapes, mismo despacho). `fincas.models.CAMPO_DESPACHO`.
-- ⬜ **T1.3** Servicio de reparto `repartir(importe, coeficientes)` con `R-REP-02`. Tests con
+- ✅ **T1.3** Servicio de reparto `repartir(importe, coeficientes)` con `R-REP-02`. Tests con
   hypothesis: la suma siempre cuadra al céntimo.
+  Hecho: `fincas.servicios.repartir` (resto mayor, cuentas exactas con `Fraction`, empates por
+  clave, admite coeficientes que no suman 100 e importes negativos). Propiedades con
+  hypothesis: suma exacta, error < 1 céntimo, monotonía, determinismo y simetría de signo.
 - ⬜ **T1.4** App `contabilidad`: `Cuenta`, `Asiento`, `Apunte`. Debe = Haber en cada asiento;
   asientos inmutables; saldo calculado. Contra-asiento para anular.
 - ⬜ **T1.5** Plantilla base HTML + HTMX + login. Lista de comunidades del despacho.

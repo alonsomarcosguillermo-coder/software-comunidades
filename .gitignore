@@ -9,3 +9,6 @@ db.sqlite3
 /media/
 .claude/settings.local.json
 .claude/worktrees/
+
+# Base de datos de ejemplos de hypothesis
+.hypothesis/

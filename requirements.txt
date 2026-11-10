@@ -5,4 +5,5 @@ psycopg[binary]>=3.2    # Conector de Python con PostgreSQL
 # Desarrollo
 pytest>=8               # Tests
 pytest-django>=4.9      # Integración de pytest con Django (base de datos de test, cliente web)
+hypothesis>=6.100       # Tests basados en propiedades (genera muchos casos aleatorios)
 ruff>=0.6               # Linter y formateador
