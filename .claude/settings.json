@@ -1,0 +1,38 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(.venv\\Scripts\\python.exe -m pytest *)",
+      "PowerShell(.venv\\Scripts\\python.exe -m pytest)",
+      "PowerShell(.venv\\Scripts\\ruff.exe check *)",
+      "PowerShell(.venv\\Scripts\\ruff.exe format *)",
+      "PowerShell(.venv\\Scripts\\python.exe manage.py *)",
+      "PowerShell(docker compose *)",
+      "PowerShell(git status *)",
+      "PowerShell(git status)",
+      "PowerShell(git diff *)",
+      "PowerShell(git diff)",
+      "PowerShell(git log *)",
+      "PowerShell(git log)",
+      "PowerShell(git branch)",
+      "Bash(.venv/Scripts/python.exe -m pytest *)",
+      "Bash(.venv/Scripts/ruff.exe *)",
+      "Bash(.venv/Scripts/python.exe manage.py *)",
+      "Bash(docker compose *)",
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)"
+    ],
+    "ask": [
+      "PowerShell(git push *)",
+      "PowerShell(git reset *)",
+      "PowerShell(Remove-Item *)",
+      "Bash(git push *)",
+      "Bash(git reset *)",
+      "Bash(rm *)"
+    ],
+    "deny": [
+      "Read(.env)",
+      "Read(**/.env)"
+    ]
+  }
+}

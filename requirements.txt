@@ -1,0 +1,8 @@
+# Dependencias. Instalar con:  pip install -r requirements.txt
+django>=5.2,<6          # Framework web: ORM, admin, usuarios, formularios
+psycopg[binary]>=3.2    # Conector de Python con PostgreSQL
+
+# Desarrollo
+pytest>=8               # Tests
+pytest-django>=4.9      # Integración de pytest con Django (base de datos de test, cliente web)
+ruff>=0.6               # Linter y formateador

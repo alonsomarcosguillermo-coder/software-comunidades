@@ -1,0 +1,21 @@
+# Base de datos PostgreSQL para desarrollo.
+# Arrancar:  docker compose up -d db     Parar:  docker compose down
+# Los datos persisten en el volumen "pgdata" aunque pares el contenedor.
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: comunidades
+      POSTGRES_USER: comunidades
+      POSTGRES_PASSWORD: comunidades
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U comunidades"]
+      interval: 5s
+      retries: 10
+
+volumes:
+  pgdata:

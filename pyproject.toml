@@ -1,0 +1,20 @@
+[project]
+name = "comunidades"
+version = "0.1.0"
+description = "Gestión de comunidades de vecinos (proyecto de aprendizaje)"
+requires-python = ">=3.13"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-ra --strict-markers"
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+extend-exclude = ["**/migrations/*"]
+
+[tool.ruff.lint]
+# E/F: errores básicos, I: orden de imports, B: bugs típicos, UP: sintaxis moderna, DJ: Django
+select = ["E", "F", "I", "B", "UP", "DJ"]

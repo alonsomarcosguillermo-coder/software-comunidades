@@ -1,0 +1,55 @@
+# Plan de trabajo
+
+Estados: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⏸️ bloqueada
+Cada tarea es una sesión de Claude Code. Criterio general de "terminado": tests nuevos que cubren la
+tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizado.
+🔀 = se puede hacer en paralelo con otras tareas 🔀 de la misma fase (cada una en su worktree).
+
+## Fase 0 — Arranque
+- ✅ **T0.1** Proyecto Django (`config/`), app `core` con modelo `Usuario` propio, settings con
+  PostgreSQL por variables de entorno, idioma es-es.
+- ✅ **T0.2** pytest + pytest-django + ruff configurados (`pyproject.toml`); tests de humo.
+- ✅ **T0.3** `docker-compose.yml` con PostgreSQL 16.
+- ✅ **T0.4** `CLAUDE.md`, `docs/SPEC.md`, `docs/DOMINIO.md`, `docs/PLAN.md`, ADR 001, subagentes.
+- ✅ **T0.5** `git init` (rama `main`) y primer commit.
+- ✅ **T0.6** PostgreSQL en Docker arrancado, migraciones aplicadas, tests contra la BD en verde.
+  Pendiente del usuario: `manage.py createsuperuser` (pide contraseña) y entrar en `/admin`.
+
+## Fase 1 — Núcleo (secuencial: todo lo demás depende de esto)
+- ⬜ **T1.1** `Despacho` y relación `Usuario` → `Despacho`. Helper/mixin que filtra por despacho.
+  Terminado: test de aislamiento (usuario del despacho A no ve datos de B).
+- ⬜ **T1.2** App `fincas`: `Comunidad` (pertenece a un despacho), `Inmueble` (tipo, referencia,
+  coeficiente), `Propietario`, titularidad. Validación `R-COEF-01`. Admin de Django configurado.
+- ⬜ **T1.3** Servicio de reparto `repartir(importe, coeficientes)` con `R-REP-02`. Tests con
+  hypothesis: la suma siempre cuadra al céntimo.
+- ⬜ **T1.4** App `contabilidad`: `Cuenta`, `Asiento`, `Apunte`. Debe = Haber en cada asiento;
+  asientos inmutables; saldo calculado. Contra-asiento para anular.
+- ⬜ **T1.5** Plantilla base HTML + HTMX + login. Lista de comunidades del despacho.
+- ⬜ **T1.6** Datos de ejemplo: comando `manage.py cargar_demo` con un despacho, 2 comunidades
+  y vecinos ficticios.
+
+## Fase 2 — Cobro
+- ⬜ **T2.1** Presupuesto anual por comunidad y partidas; fondo de reserva `R-RES-01`.
+- ⬜ **T2.2** 🔀 Emisión de cuotas ordinarias por periodo (usa T1.3), con asientos contables.
+- ⬜ **T2.3** 🔀 Derramas (importe total, plazos, grupo de reparto).
+- ⬜ **T2.4** Recibos y mandatos SEPA `R-SEPA-01`.
+- ⬜ **T2.5** Generación de remesa pain.008 `R-SEPA-02`, validada contra el esquema XSD.
+
+## Fase 3 — Bancos y morosidad
+- ⬜ **T3.1** 🔀 Importar extractos Norma 43.
+- ⬜ **T3.2** Conciliación automática (importe + referencia) y manual.
+- ⬜ **T3.3** 🔀 Devoluciones de recibos → deuda del propietario.
+- ⬜ **T3.4** 🔀 Informe de morosos y certificado de deuda `R-DEU-01` (PDF).
+
+## Fase 4 — Juntas
+- ⬜ **T4.1** Convocatoria (orden del día, plazos `R-JUN-02`, envío por email).
+- ⬜ **T4.2** Servicio puro de cálculo de mayorías `R-MAY-01..05`, `R-VOT-01`. Muchos tests.
+- ⬜ **T4.3** Registro de asistencia y votos; borrador de acta.
+
+## Fase 5 — Portal del vecino y salida
+- ⬜ **T5.1** Portal: recibos, deuda, documentos.
+- ⬜ **T5.2** Votación online del vecino.
+- ⬜ **T5.3** GitHub + CI (GitHub Actions con PostgreSQL de servicio).
+
+## Ideas / deuda técnica
+- (vacío)

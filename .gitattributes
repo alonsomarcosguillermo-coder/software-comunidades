@@ -1,0 +1,3 @@
+# Finales de línea coherentes entre Windows y Linux (CI, Docker)
+* text=auto eol=lf
+*.bat text eol=crlf
