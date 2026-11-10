@@ -12,9 +12,15 @@ python -m venv .venv
 docker compose up -d db
 .venv\Scripts\python.exe manage.py migrate
 .venv\Scripts\python.exe manage.py createsuperuser
+.venv\Scripts\python.exe manage.py cargar_demo   # datos de ejemplo ficticios (opcional)
 .venv\Scripts\python.exe manage.py runserver
 ```
-Abre http://127.0.0.1:8000/admin/
+- Aplicación: http://127.0.0.1:8000/ (entra con un usuario de demo, p. ej. `admin.beta`)
+- Admin de Django: http://127.0.0.1:8000/admin/ (superusuario)
+
+`cargar_demo` crea los despachos Fincas Alfa y Fincas Beta, sus comunidades y los usuarios
+`admin.alfa`, `empleado.alfa`, `admin.beta` y `vecino.lucia` con la clave
+`demo-comunidades-2026`. Solo funciona con `DEBUG` activo y se puede repetir sin duplicar datos.
 
 ## Tests
 ```powershell

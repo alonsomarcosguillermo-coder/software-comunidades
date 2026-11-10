@@ -41,8 +41,12 @@ tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizad
   Hecho: `templates/base.html` (HTMX 2.0.4 en `static/js/`, CSRF en `hx-headers`), login y
   logout en `/entrar/` y `/salir/`, `/comunidades/` con `FiltradoPorDespachoMixin`, búsqueda
   HTMX que devuelve solo `_tabla_comunidades.html`, estado R-COEF-01 por comunidad.
-- ⬜ **T1.6** Datos de ejemplo: comando `manage.py cargar_demo` con un despacho, 2 comunidades
+- ✅ **T1.6** Datos de ejemplo: comando `manage.py cargar_demo` con un despacho, 2 comunidades
   y vecinos ficticios.
+  Hecho: `core/management/commands/cargar_demo.py`, idempotente y solo con DEBUG. Añade un
+  segundo despacho (Fincas Beta) para poder ver el aislamiento, grupos con permisos, usuarios
+  de demo y algo de contabilidad (con un contra-asiento). No cambia la clave de usuarios que
+  ya existen. Tests con hasher rápido (`tests/conftest.py`).
 
 ## Fase 2 — Cobro
 - ⬜ **T2.1** Presupuesto anual por comunidad y partidas; fondo de reserva `R-RES-01`.
@@ -84,3 +88,6 @@ tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizad
 - Pregunta pendiente para `DOMINIO.md`: ¿la titularidad necesita % de propiedad (proindiviso)
   y un representante por inmueble para votar (art. 15.1 LPH)? De momento no se modela.
 - Validación de formato del NIF/NIE (letra de control): no implementada.
+- Los grupos (roles) y sus permisos solo existen en `cargar_demo`. Cuando se definan los roles
+  reales, crearlos con una migración de datos y que `cargar_demo` los reutilice.
+- La lista de comunidades no tiene paginación (hará falta con muchas comunidades).
