@@ -1,0 +1,37 @@
+{# Trozo que HTMX sustituye. El "_" inicial indica que no es una página completa. #}
+<div id="tabla-comunidades">
+  {% if comunidades %}
+    <table class="tabla">
+      <thead>
+        <tr>
+          <th>Comunidad</th>
+          <th>Dirección</th>
+          <th class="num">Inmuebles</th>
+          <th class="num">Suma coeficientes</th>
+          <th>R-COEF-01</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for comunidad in comunidades %}
+          <tr>
+            <td>{{ comunidad.nombre }}</td>
+            <td>{{ comunidad.direccion|default:"—" }}</td>
+            <td class="num">{{ comunidad.num_inmuebles }}</td>
+            <td class="num">{{ comunidad.suma_coeficientes|floatformat:4 }} %</td>
+            <td>
+              {% if comunidad.cuadran %}
+                <span class="estado ok">Cuadran</span>
+              {% else %}
+                <span class="estado mal">No suman 100 %</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% elif busqueda %}
+    <p class="vacio">Ninguna comunidad coincide con «{{ busqueda }}».</p>
+  {% else %}
+    <p class="vacio">Tu despacho todavía no tiene comunidades.</p>
+  {% endif %}
+</div>

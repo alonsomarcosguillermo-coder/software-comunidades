@@ -87,6 +87,11 @@ DATABASES = {
 # cambiarlo después obliga a rehacer la base de datos.
 AUTH_USER_MODEL = "core.Usuario"
 
+# Login propio de la aplicación (el del admin es aparte, en /admin/login/).
+LOGIN_URL = "login"
+LOGIN_REDIRECT_URL = "fincas:lista_comunidades"
+LOGOUT_REDIRECT_URL = "login"
+
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},

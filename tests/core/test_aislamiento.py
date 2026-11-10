@@ -12,6 +12,7 @@ from django.contrib.auth.models import AnonymousUser
 from django.db.models.deletion import ProtectedError
 from django.http import Http404
 from django.test import RequestFactory
+from django.urls import reverse
 from django.views.generic import DetailView, ListView
 
 from core.aislamiento import FiltradoPorDespachoMixin, filtrar_por_despacho
@@ -150,4 +151,4 @@ def test_mixin_detalle_del_propio_despacho_funciona(ana, alberto):
 def test_mixin_exige_iniciar_sesion(ana):
     respuesta = ListaUsuarios.as_view()(_peticion(AnonymousUser()))
     assert respuesta.status_code == 302
-    assert "login" in respuesta.url
+    assert respuesta.url.startswith(reverse("login"))

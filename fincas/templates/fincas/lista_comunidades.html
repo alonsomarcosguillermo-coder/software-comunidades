@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block titulo %}Comunidades{% endblock %}
+
+{% block contenido %}
+<div class="titulo-seccion">
+  <h1>Comunidades</h1>
+  {#
+    Búsqueda con HTMX: al escribir (con 300 ms de espera), pide esta misma URL con ?q=...
+    y sustituye la tabla (#tabla-comunidades) por la respuesta. hx-push-url actualiza la
+    barra de direcciones, así que recargar la página mantiene la búsqueda.
+  #}
+  <input type="search" name="q" value="{{ busqueda }}" placeholder="Buscar por nombre…"
+         aria-label="Buscar comunidades"
+         hx-get="{% url 'fincas:lista_comunidades' %}"
+         hx-trigger="input changed delay:300ms, search"
+         hx-target="#tabla-comunidades"
+         hx-swap="outerHTML"
+         hx-push-url="true">
+</div>
+{% include "fincas/_tabla_comunidades.html" %}
+{% endblock %}

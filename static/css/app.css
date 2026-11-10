@@ -1,0 +1,110 @@
+/* Estilos mínimos de la aplicación. Sin framework CSS: lo justo para que se lea bien. */
+
+:root {
+  --fondo: #f6f7f9;
+  --superficie: #ffffff;
+  --texto: #1f2933;
+  --suave: #616e7c;
+  --borde: #d9dee4;
+  --acento: #2459b3;
+  --ok: #1d7a46;
+  --ok-fondo: #e3f4ea;
+  --mal: #a5281b;
+  --mal-fondo: #fbe7e4;
+  --aviso-fondo: #fff4d6;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--fondo);
+  color: var(--texto);
+  line-height: 1.5;
+}
+
+a { color: var(--acento); }
+
+.cabecera {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  padding: 0.75rem 1.5rem;
+  background: var(--superficie);
+  border-bottom: 1px solid var(--borde);
+}
+.marca { font-weight: 700; text-decoration: none; color: var(--texto); }
+.menu { display: flex; gap: 1rem; }
+.usuario { margin-left: auto; display: flex; align-items: center; gap: 0.75rem; }
+.usuario form { margin: 0; }
+
+.etiqueta {
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: var(--fondo);
+  border: 1px solid var(--borde);
+  font-size: 0.85rem;
+}
+
+.contenido { max-width: 960px; margin: 2rem auto; padding: 0 1rem; }
+
+.titulo-seccion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+input, button { font: inherit; }
+input[type="text"], input[type="password"], input[type="search"] {
+  width: 100%;
+  max-width: 320px;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--borde);
+  border-radius: 6px;
+}
+button {
+  padding: 0.5rem 1rem;
+  border: 0;
+  border-radius: 6px;
+  background: var(--acento);
+  color: #fff;
+  cursor: pointer;
+}
+.boton-enlace { background: none; color: var(--acento); padding: 0; text-decoration: underline; }
+
+.tarjeta {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+.login { max-width: 360px; margin: 3rem auto; }
+.login form { display: grid; gap: 0.5rem; }
+.login input { max-width: none; }
+.login button { margin-top: 0.75rem; }
+
+.tabla {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+}
+.tabla th, .tabla td { padding: 0.6rem 0.8rem; border-bottom: 1px solid var(--borde); text-align: left; }
+.tabla th { font-size: 0.85rem; color: var(--suave); }
+.num { text-align: right !important; font-variant-numeric: tabular-nums; }
+
+.estado { padding: 0.1rem 0.5rem; border-radius: 4px; font-size: 0.85rem; }
+.estado.ok { background: var(--ok-fondo); color: var(--ok); }
+.estado.mal { background: var(--mal-fondo); color: var(--mal); }
+
+.error { color: var(--mal); }
+.aviso { background: var(--aviso-fondo); padding: 0.75rem 1rem; border-radius: 6px; }
+.vacio { color: var(--suave); }
+
+@media (max-width: 640px) {
+  .tabla th:nth-child(2), .tabla td:nth-child(2) { display: none; }
+}

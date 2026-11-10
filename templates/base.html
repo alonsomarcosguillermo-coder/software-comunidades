@@ -1,0 +1,39 @@
+{% load static %}<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titulo %}Comunidades{% endblock %} · Comunidades</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  {# HTMX servido desde nuestro propio static/ (versión 2.0.4), sin depender de un CDN. #}
+  <script src="{% static 'js/htmx.min.js' %}" defer></script>
+</head>
+{# Todas las peticiones de HTMX llevan el token CSRF, para que Django acepte los POST. #}
+<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+  <header class="cabecera">
+    <a class="marca" href="{% url 'inicio' %}">Comunidades</a>
+    {% if user.is_authenticated %}
+      <nav class="menu">
+        <a href="{% url 'fincas:lista_comunidades' %}">Comunidades</a>
+      </nav>
+      <div class="usuario">
+        <span>{{ user.get_full_name|default:user.username }}</span>
+        {% if user.despacho %}<span class="etiqueta">{{ user.despacho }}</span>{% endif %}
+        {# Desde Django 5, cerrar sesión exige POST (un enlace GET podría dispararlo cualquiera). #}
+        <form method="post" action="{% url 'logout' %}">
+          {% csrf_token %}
+          <button type="submit" class="boton-enlace">Salir</button>
+        </form>
+      </div>
+    {% endif %}
+  </header>
+
+  <main class="contenido">
+    {% if user.is_authenticated and not user.despacho %}
+      <p class="aviso">Tu usuario no está asignado a ningún despacho, así que no verás datos.
+        Pide a un administrador que te asigne uno.</p>
+    {% endif %}
+    {% block contenido %}{% endblock %}
+  </main>
+</body>
+</html>

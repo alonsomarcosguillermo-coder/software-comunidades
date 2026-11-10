@@ -37,7 +37,10 @@ tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizad
   por comunidad); cuadre puro en `servicios.comprobar_cuadre`; inmutabilidad en Python y con
   triggers de PostgreSQL (migración 0002, ADR 003); `Cuenta.saldo(hasta=)`. Admin: cuentas con
   saldo; asientos solo lectura.
-- ⬜ **T1.5** Plantilla base HTML + HTMX + login. Lista de comunidades del despacho.
+- ✅ **T1.5** Plantilla base HTML + HTMX + login. Lista de comunidades del despacho.
+  Hecho: `templates/base.html` (HTMX 2.0.4 en `static/js/`, CSRF en `hx-headers`), login y
+  logout en `/entrar/` y `/salir/`, `/comunidades/` con `FiltradoPorDespachoMixin`, búsqueda
+  HTMX que devuelve solo `_tabla_comunidades.html`, estado R-COEF-01 por comunidad.
 - ⬜ **T1.6** Datos de ejemplo: comando `manage.py cargar_demo` con un despacho, 2 comunidades
   y vecinos ficticios.
 
