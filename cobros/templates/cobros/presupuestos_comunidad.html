@@ -56,6 +56,38 @@
         <tr><th>Total a cobrar en cuotas</th><th class="num">{{ fila.total }} €</th></tr>
       </tfoot>
     </table>
+    {% if fila.presupuesto.esta_aprobado %}
+      {# T2.2: cuotas ordinarias, periodo a periodo. #}
+      <h3>Cuotas ({{ fila.presupuesto.get_periodos_display|lower }})</h3>
+      <table class="tabla">
+        <thead><tr><th>Periodo</th><th>Estado</th><th class="num">Total emitido</th></tr></thead>
+        <tbody>
+          {% for numero, emision in fila.periodos %}
+            <tr>
+              <td>{{ numero }}/{{ fila.presupuesto.periodos }}</td>
+              {% if emision %}
+                <td><span class="estado ok">Emitido el {{ emision.fecha|date:"j/n/Y" }}</span>
+                  · asiento {{ emision.asiento.numero }}</td>
+                <td class="num">{{ emision.total_cuotas }} €</td>
+              {% elif puede_emitir %}
+                <td colspan="2">
+                  <form method="post" class="emitir"
+                        action="{% url 'cobros:emitir_cuotas' comunidad.pk fila.presupuesto.pk %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="periodo" value="{{ numero }}">
+                    <input type="date" name="fecha" value="{{ hoy|date:'Y-m-d' }}" required
+                           aria-label="Fecha de emisión del periodo {{ numero }}">
+                    <button type="submit">Emitir</button>
+                  </form>
+                </td>
+              {% else %}
+                <td colspan="2"><span class="estado">Pendiente</span></td>
+              {% endif %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% endif %}
     {% if fila.prevision %}
       <p>Previsión R-RES-01 (saldo actual + aportación prevista = {{ fila.prevision.saldo }} €,
         mínimo {{ fila.prevision.minimo }} €):

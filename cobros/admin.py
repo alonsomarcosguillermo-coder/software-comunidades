@@ -2,7 +2,7 @@ from django.contrib import admin, messages
 from django.utils import timezone
 
 from .derramas import DerramaInvalida, emitir_derrama
-from .models import CuotaDerrama, Derrama, Partida, Presupuesto
+from .models import Cuota, CuotaDerrama, Derrama, Emision, Partida, Presupuesto
 from .servicios import total_partidas
 
 # Nota (ADR 002): el admin de Django NO filtra por despacho. Es solo para el superusuario.
@@ -34,6 +34,7 @@ class PresupuestoAdmin(admin.ModelAdmin):
         "ejercicio",
         "comunidad",
         "fecha_aprobacion",
+        "periodos",
         "total_gastos",
         "aportacion_fondo_reserva",
         "total",
@@ -47,7 +48,7 @@ class PresupuestoAdmin(admin.ModelAdmin):
 
     def get_readonly_fields(self, request, obj=None):
         if _aprobado(obj):
-            return ["comunidad", "ejercicio", "aportacion_fondo_reserva"]
+            return ["comunidad", "ejercicio", "aportacion_fondo_reserva", "periodos"]
         return []
 
     def has_delete_permission(self, request, obj=None):
@@ -85,6 +86,33 @@ class PresupuestoAdmin(admin.ModelAdmin):
     @admin.display(description="total a cobrar")
     def total(self, presupuesto):
         return self._gastos(presupuesto) + presupuesto.aportacion_fondo_reserva
+
+
+class SoloLecturaMixin:
+    """Emisiones y cuotas se crean con `cobros.emision.emitir_cuotas` y son inmutables."""
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+class CuotaInline(SoloLecturaMixin, admin.TabularInline):
+    model = Cuota
+    fields = ["inmueble", "importe"]
+    extra = 0
+
+
+@admin.register(Emision)
+class EmisionAdmin(SoloLecturaMixin, admin.ModelAdmin):
+    list_display = ["presupuesto", "periodo", "fecha", "asiento"]
+    list_filter = ["presupuesto__comunidad__despacho", "presupuesto__comunidad"]
+    date_hierarchy = "fecha"
+    inlines = [CuotaInline]
 
 
 class CuotaDerramaInline(admin.TabularInline):

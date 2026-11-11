@@ -17,6 +17,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from cobros.derramas import emitir_derrama
+from cobros.emision import emitir_cuotas
 from cobros.models import Derrama, Partida, Presupuesto
 from contabilidad.models import Cuenta
 from contabilidad.registro import anular_asiento, registrar_asiento
@@ -55,6 +56,9 @@ GRUPOS = {
         "contabilidad.view_apunte",
         *_todos("cobros", "presupuesto"),
         *_todos("cobros", "partida"),
+        "cobros.view_emision",
+        "cobros.add_emision",
+        "cobros.view_cuota",
         *_todos("fincas", "gruporeparto"),
         *_todos("fincas", "miembrogrupo"),
         *_todos("cobros", "derrama"),
@@ -74,6 +78,8 @@ GRUPOS = {
         "contabilidad.view_apunte",
         "cobros.view_presupuesto",
         "cobros.view_partida",
+        "cobros.view_emision",
+        "cobros.view_cuota",
         "fincas.view_gruporeparto",
         "fincas.view_miembrogrupo",
         "cobros.view_derrama",
@@ -130,8 +136,8 @@ CUENTAS = [
 CUENTA_FONDO_RESERVA = "113"
 
 # comunidad -> [(ejercicio, fecha de aprobación o None, aportación al fondo, partidas)]
-# Con el fondo de demo (350 €), "CP Calle Ficticia 1" NO cumple R-RES-01 con su presupuesto
-# aprobado de 2026 (mínimo 491 €), pero con la aportación prevista en 2027 sí llegará.
+# Con el fondo de demo (350 € + 125 € del primer trimestre emitido), "CP Calle Ficticia 1"
+# NO cumple R-RES-01 con su presupuesto aprobado de 2026 (mínimo 491 €).
 PRESUPUESTOS = {
     "CP Calle Ficticia 1": [
         (
@@ -353,6 +359,12 @@ class Command(BaseCommand):
                 if aprobado_el:
                     presupuesto.fecha_aprobacion = aprobado_el
                     presupuesto.save()
+        # T2.2: el primer trimestre de 2026 ya emitido en la comunidad con contabilidad.
+        presupuesto = Presupuesto.objects.get(
+            comunidad__nombre=COMUNIDAD_CON_CONTABILIDAD, ejercicio=2026
+        )
+        if not presupuesto.emisiones.filter(periodo=1).exists():
+            emitir_cuotas(presupuesto, 1, date(2026, 1, 5))
 
     def _derramas(self):
         for nombre, grupos in GRUPOS_REPARTO.items():

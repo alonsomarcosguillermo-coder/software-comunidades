@@ -9,7 +9,7 @@ from django.core.management import CommandError, call_command
 from django.urls import reverse
 
 from cobros.consultas import fondo_reserva_de
-from cobros.models import CuotaDerrama, Derrama, Partida, Presupuesto
+from cobros.models import Cuota, CuotaDerrama, Derrama, Emision, Partida, Presupuesto
 from contabilidad.models import Apunte, Asiento, Cuenta
 from core.management.commands.cargar_demo import CLAVE_DEMO
 from core.models import Despacho, Usuario
@@ -35,6 +35,8 @@ MODELOS = [
     Apunte,
     Presupuesto,
     Partida,
+    Emision,
+    Cuota,
     GrupoReparto,
     MiembroGrupo,
     Derrama,
@@ -177,12 +179,19 @@ def test_crea_presupuestos_aprobados_y_borradores(demo):
 @pytest.mark.django_db
 def test_r_res_01_la_demo_muestra_un_fondo_de_reserva_insuficiente(demo):
     fondo = fondo_reserva_de(Comunidad.objects.get(nombre="CP Calle Ficticia 1"))
-    assert fondo.saldo == Decimal("350.00")
+    assert fondo.saldo == Decimal("475.00")  # 350 iniciales + 125 del primer trimestre
     assert fondo.estado.minimo == Decimal("491.00")
     assert not fondo.estado.cumple
 
 
 @pytest.mark.django_db
+def test_la_demo_tiene_el_primer_trimestre_emitido(demo):
+    emision = Emision.objects.get()
+    assert emision.periodo == 1
+    assert emision.total() == emision.asiento.total_debe()
+    assert emision.cuotas.count() == 6  # un inmueble por cuota
+
+
 def test_crea_un_grupo_de_reparto_y_derramas(demo):
     """T2.3 / R-REP-01: una derrama emitida entre todos y otra propuesta solo para un grupo."""
     grupo = GrupoReparto.objects.get(nombre="Ascensor")

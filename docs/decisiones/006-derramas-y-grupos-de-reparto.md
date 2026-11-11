@@ -44,5 +44,5 @@ cuotas ordinarias, su reparto no debe cambiar una vez cobrado.
   de cuentas por defecto.
 - Anular una derrama emitida (contra-asiento y cuotas anuladas) queda pendiente, como anular
   una emisión de cuotas ordinarias.
-- `plan_de_derrama` y `plan_de_cuotas` (T2.2) son el mismo algoritmo: al fusionar las dos
-  ramas, unificarlos.
+- `plan_de_derrama` reutiliza `plan_de_cuotas` (T2.2): es el mismo algoritmo, con plazos en
+  vez de periodos. La cuenta 430 y su creación también se comparten con `cobros.emision`.

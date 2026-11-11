@@ -56,10 +56,16 @@ tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizad
   (mínimo redondeado hacia arriba, hypothesis) y con la BD en `cobros.consultas`. Página
   `/comunidades/<id>/presupuestos/` con partidas, totales, estado del fondo y previsión.
   `cargar_demo` añade presupuestos y un fondo insuficiente. ADR 004.
-- ⬜ **T2.2** 🔀 Emisión de cuotas ordinarias por periodo (usa T1.3), con asientos contables.
-  Parte del presupuesto aprobado de T2.1 (`Presupuesto.total()`: gastos + aportación al
-  fondo). Debe negarse si el presupuesto no está aprobado o si R-COEF-01 no se cumple, e
-  impedir quitar la aprobación cuando ya haya cuotas emitidas.
+- ✅ **T2.2** 🔀 Emisión de cuotas ordinarias por periodo (usa T1.3), con asientos contables.
+  Hecho: `Presupuesto.periodos` (anual/semestral/trimestral/mensual, fija al aprobar);
+  `cobros.servicios.plan_de_cuotas` (R-REP-02 en dos pasos: inmuebles y luego periodos;
+  hypothesis: cuadra al céntimo y cada inmueble paga su parte anual exacta);
+  `cobros.emision.emitir_cuotas` crea `Emision` + `Cuota` (inmutables) y el asiento
+  430 / 705 + fondo de reserva (desglose sobre lo acumulado: el fondo recibe la aportación
+  exacta). Se niega sin aprobación (R-PRE-01), sin R-COEF-01, periodo repetido o sin cuenta
+  de fondo; con cuotas emitidas no se puede quitar la aprobación. Botón "Emitir" por
+  periodo en la página de presupuestos (permiso `cobros.add_emision`, PRG con mensajes).
+  `cargar_demo` emite el primer trimestre. ADR 005.
 - ✅ **T2.3** 🔀 Derramas (importe total, plazos, grupo de reparto).
   Hecho: grupos de reparto R-REP-01 en `fincas` (`GrupoReparto`, `MiembroGrupo` con
   coeficiente propio opcional, todos o ninguno: `servicios.coeficientes_de_grupo`).
@@ -96,12 +102,12 @@ tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizad
   cuadren a un asiento ya existente (los apuntes nuevos sí deben ir con `registrar_asiento`).
 - Contabilidad: falta un plan de cuentas por defecto al crear una comunidad (572, 430, 6xx,
   7xx...) y el tipo de cuenta (activo, pasivo, gasto, ingreso) para informes. T2.1 solo
-  añadió la marca `es_fondo_reserva`; el resto, probablemente en T2.2.
+  añadió la marca `es_fondo_reserva` y T2.2 crea 430/705 si faltan; sigue sin haber plan
+  completo ni subcuentas 430 por propietario.
 - Contabilidad: no hay ejercicios ni cierre; no se impide registrar asientos con fecha pasada.
 - `config/urls.py` conserva el docstring en inglés generado por Django.
-- R-COEF-01 solo se exige al editar la comunidad en el admin. Cuando haya vistas o importación
-  de inmuebles (T1.5, T1.6), usar `comprobar_coeficientes` también ahí; y T2.2 (emitir cuotas)
-  debe negarse si `Comunidad.coeficientes_cuadran()` es falso.
+- R-COEF-01 solo se exige al editar la comunidad en el admin (y al emitir cuotas). Cuando haya
+  vistas o importación de inmuebles, usar `comprobar_coeficientes` también ahí.
 - Pregunta pendiente para `DOMINIO.md`: ¿la titularidad necesita % de propiedad (proindiviso)
   y un representante por inmueble para votar (art. 15.1 LPH)? De momento no se modela.
 - Validación de formato del NIF/NIE (letra de control): no implementada.
@@ -111,13 +117,11 @@ tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizad
 - Presupuestos: se crean y editan solo en el admin (sin filtro por despacho). Falta una vista
   propia de alta/edición para el administrador de fincas.
 - Presupuestos aprobados: la protección es solo en Python (`QuerySet.update()` de partidas la
-  esquiva). T2.2 debe impedir quitar la aprobación si ya hay cuotas emitidas.
+  esquiva).
 - Partidas sin grupo de reparto (R-REP-01) ni cuenta de gasto asociada. Los grupos ya existen
   (T2.3); falta que una partida pueda repartirse solo entre un grupo en las cuotas ordinarias.
-- Al fusionar T2.2 y T2.3: las dos crean `cobros/migrations/0002_*` (renumerar la de derramas
-  a 0003, dependiendo de `0002_emision_cuotas`); `plan_de_derrama` = `plan_de_cuotas`
-  (unificar); `_cuenta()` y las cuentas 430 están duplicadas en `cobros/emision.py` y
-  `cobros/derramas.py` (llevar a `contabilidad`); `tests/cobros/conftest.py` puede chocar.
+- `cobros.emision.cuenta_por_codigo` crea las cuentas 430/705/706 con código fijo; cuando
+  haya un plan de cuentas por defecto, llevarlo a `contabilidad`.
 - Derramas: no se pueden anular una vez emitidas (faltan contra-asiento y anular cuotas). Se
   crean y emiten solo en el admin (sin filtro por despacho); la acción "Emitir" fecha el
   asiento con el día de hoy.
@@ -125,3 +129,11 @@ tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizad
   (el modelo rechaza los de otra comunidad al guardar).
 - El saldo del fondo de reserva cuenta todos los apuntes, también los de fecha futura.
 - Pregunta pendiente para `DOMINIO.md`: base del 10 % de R-RES-01 (ver nota bajo R-PRE-01).
+- Emisiones: no se pueden anular (haría falta contra-asiento + marca de anulada). Tampoco hay
+  vista con el detalle de cuotas por inmueble (solo el admin).
+- Emisiones: el plan se recalcula con los coeficientes del momento; si cambian a mitad de
+  año, la parte anual de un inmueble deja de ser exacta (ver ADR 005).
+- Cuotas: todo el presupuesto se reparte por coeficiente general; los grupos de reparto
+  (R-REP-01) ya existen (T2.3) pero las cuotas ordinarias aún no los usan.
+- `cargar_demo` mantiene un asiento manual "Cuotas de enero emitidas" de T1.6 que ahora
+  convive con la emisión real del primer trimestre.

@@ -1,8 +1,12 @@
-"""Presupuesto ordinario anual de una comunidad y sus partidas (T2.1); derramas (T2.3).
+"""Presupuesto ordinario anual y sus partidas (T2.1); emisiones de cuotas (T2.2); derramas
+(T2.3).
 
 Un presupuesto en borrador se edita libremente. Una vez aprobado (R-PRE-01: en la junta
 ordinaria; mientras no exista la app de juntas, se anota la fecha a mano) sus importes
-quedan fijos, porque de él saldrán las cuotas (T2.2).
+quedan fijos, porque de él salen las cuotas. Con cuotas emitidas ya no se puede ni
+quitar la aprobación.
+
+Las emisiones y sus cuotas van unidas a un asiento contable y, como él, son inmutables.
 
 Una derrama se edita libremente hasta que se emite (`cobros.derramas.emitir_derrama`): desde
 entonces tiene asiento contable y cuotas, y no se puede cambiar ni borrar.
@@ -73,6 +77,19 @@ class Presupuesto(models.Model):
         validators=[MinValueValidator(CERO)],
     )
 
+    class Periodicidad(models.IntegerChoices):
+        ANUAL = 1, "Anual"
+        SEMESTRAL = 2, "Semestral"
+        TRIMESTRAL = 4, "Trimestral"
+        MENSUAL = 12, "Mensual"
+
+    # En cuántos periodos (cuotas) se cobra el total del año.
+    periodos = models.PositiveSmallIntegerField(
+        "periodicidad de las cuotas",
+        choices=Periodicidad.choices,
+        default=Periodicidad.TRIMESTRAL,
+    )
+
     objects = PresupuestoQuerySet.as_manager()
 
     class Meta:
@@ -98,8 +115,13 @@ class Presupuesto(models.Model):
             guardado.comunidad_id != self.comunidad_id
             or guardado.ejercicio != self.ejercicio
             or guardado.aportacion_fondo_reserva != self.aportacion_fondo_reserva
+            or guardado.periodos != self.periodos
         ):
             raise PresupuestoAprobado()
+        if guardado is not None and not self.esta_aprobado and guardado.emisiones.exists():
+            raise PresupuestoAprobado(
+                "Este presupuesto ya tiene cuotas emitidas: no se puede quitar su aprobación."
+            )
         super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
@@ -162,6 +184,64 @@ class Partida(models.Model):
     def _presupuesto_aprobado(self) -> bool:
         # Se consulta la base de datos (no `self.presupuesto`, que podría estar desfasado).
         return Presupuesto.objects.aprobados().filter(pk=self.presupuesto_id).exists()
+
+
+class Emision(ModeloInmutable):
+    """Emisión de las cuotas ordinarias de un periodo de un presupuesto (T2.2).
+
+    Se crea con `cobros.emision.emitir_cuotas`, junto con su asiento y sus cuotas. Es
+    inmutable: un error se corregirá anulando la emisión con un contra-asiento.
+    """
+
+    presupuesto = models.ForeignKey(Presupuesto, on_delete=models.PROTECT, related_name="emisiones")
+    periodo = models.PositiveSmallIntegerField()  # 1..presupuesto.periodos
+    fecha = models.DateField()
+    asiento = models.OneToOneField(Asiento, on_delete=models.PROTECT, related_name="emision")
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    objects = InmutableQuerySet.as_manager()
+
+    class Meta:
+        verbose_name = "emisión de cuotas"
+        verbose_name_plural = "emisiones de cuotas"
+        ordering = ["presupuesto", "periodo"]
+        constraints = [
+            # Un periodo se emite una sola vez (también si dos personas emiten a la vez).
+            models.UniqueConstraint(
+                fields=["presupuesto", "periodo"], name="emision_periodo_unico"
+            ),
+            models.CheckConstraint(condition=Q(periodo__gte=1), name="emision_periodo_positivo"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.presupuesto} · periodo {self.periodo}/{self.presupuesto.periodos}"
+
+    def total(self) -> Decimal:
+        return total_partidas(self.cuotas.values_list("importe", flat=True))
+
+
+class Cuota(ModeloInmutable):
+    """Lo que debe pagar un inmueble en una emisión. De ella saldrá el recibo (T2.4)."""
+
+    emision = models.ForeignKey(Emision, on_delete=models.PROTECT, related_name="cuotas")
+    inmueble = models.ForeignKey(Inmueble, on_delete=models.PROTECT, related_name="cuotas")
+    importe = models.DecimalField(max_digits=12, decimal_places=2)
+
+    objects = InmutableQuerySet.as_manager()
+
+    class Meta:
+        verbose_name = "cuota"
+        verbose_name_plural = "cuotas"
+        ordering = ["emision", "inmueble__referencia"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["emision", "inmueble"], name="cuota_unica_por_inmueble"
+            ),
+            models.CheckConstraint(condition=Q(importe__gt=0), name="cuota_importe_positivo"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.inmueble} · {self.importe} €"
 
 
 # --- Derramas (T2.3) ------------------------------------------------------------------
@@ -321,6 +401,8 @@ class CuotaDerrama(ModeloInmutable):
 CAMPO_DESPACHO = {
     Presupuesto: "comunidad__despacho",
     Partida: "presupuesto__comunidad__despacho",
+    Emision: "presupuesto__comunidad__despacho",
+    Cuota: "emision__presupuesto__comunidad__despacho",
     Derrama: "comunidad__despacho",
     CuotaDerrama: "derrama__comunidad__despacho",
 }

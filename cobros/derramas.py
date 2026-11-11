@@ -16,18 +16,17 @@ from decimal import Decimal
 
 from django.db import transaction
 
-from contabilidad.models import Cuenta
 from contabilidad.registro import registrar_asiento
 from contabilidad.servicios import Linea
-from fincas.models import Comunidad, Inmueble
+from fincas.models import Inmueble
 from fincas.servicios import GrupoInvalido
 
+from .emision import CUENTA_PROPIETARIOS, cuenta_por_codigo
 from .models import CuotaDerrama, Derrama
 from .servicios import CERO, plan_de_derrama
 
-# Cuentas que usa la emisión. Si la comunidad no las tiene, se crean con estos datos.
-# Mismo criterio que la emisión de cuotas ordinarias (T2.2).
-CUENTA_PROPIETARIOS = ("430", "Propietarios")
+# Cuenta de ingresos de las derramas; si la comunidad no la tiene, se crea. La de
+# propietarios (430) es la misma que usan las cuotas ordinarias (T2.2).
 CUENTA_DERRAMAS = ("706", "Derramas")
 
 
@@ -92,12 +91,6 @@ def filas_de_reparto(plan: dict[int, dict[int, Decimal]]) -> list[FilaReparto]:
     return filas
 
 
-def _cuenta(comunidad: Comunidad, codigo: str, nombre: str) -> Cuenta:
-    return Cuenta.objects.get_or_create(
-        comunidad=comunidad, codigo=codigo, defaults={"nombre": nombre}
-    )[0]
-
-
 @transaction.atomic
 def emitir_derrama(derrama: Derrama, fecha: date) -> Derrama:
     """Emite la derrama: fija su reparto en cuotas (inmueble × plazo) y registra su asiento.
@@ -135,12 +128,12 @@ def emitir_derrama(derrama: Derrama, fecha: date) -> Derrama:
     for cuota in cuotas:
         por_inmueble[cuota.inmueble_id] = por_inmueble.get(cuota.inmueble_id, CERO) + cuota.importe
     referencias = dict(Inmueble.objects.filter(pk__in=por_inmueble).values_list("pk", "referencia"))
-    propietarios = _cuenta(comunidad, *CUENTA_PROPIETARIOS)
+    propietarios = cuenta_por_codigo(comunidad, *CUENTA_PROPIETARIOS)
     lineas = [
         Linea(propietarios, debe=importe, concepto=referencias[pk])
         for pk, importe in sorted(por_inmueble.items(), key=lambda par: referencias[par[0]])
     ]
-    lineas.append(Linea(_cuenta(comunidad, *CUENTA_DERRAMAS), haber=derrama.importe))
+    lineas.append(Linea(cuenta_por_codigo(comunidad, *CUENTA_DERRAMAS), haber=derrama.importe))
 
     asiento = registrar_asiento(comunidad, fecha, f"Derrama: {derrama.concepto}", lineas)
     CuotaDerrama.objects.bulk_create(cuotas)

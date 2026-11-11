@@ -113,6 +113,14 @@ section.tarjeta h2 { margin-top: 0; }
 .datos { display: grid; grid-template-columns: 1fr auto; gap: 0.25rem 1rem; max-width: 480px; }
 .datos dd { margin: 0; }
 
+/* Emisión de cuotas y mensajes (T2.2) */
+form.emitir { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin: 0; }
+form.emitir input[type="date"] { padding: 0.35rem 0.5rem; border: 1px solid var(--borde); border-radius: 6px; }
+form.emitir button { padding: 0.35rem 0.8rem; }
+.mensaje { padding: 0.75rem 1rem; border-radius: 6px; }
+.mensaje.success { background: var(--ok-fondo); color: var(--ok); }
+.mensaje.error { background: var(--mal-fondo); color: var(--mal); }
+
 @media (max-width: 640px) {
   /* En móvil, la lista de comunidades oculta la columna de dirección. */
   #tabla-comunidades .tabla th:nth-child(2), #tabla-comunidades .tabla td:nth-child(2) { display: none; }
