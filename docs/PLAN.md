@@ -86,7 +86,15 @@ tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizad
   `/comunidades/<id>/recibos/` (IBAN siempre oculto) con botón "Generar recibos"
   (`cobros.add_recibo`). Admin de mandatos y recibos. `cargar_demo` con NIF/IBAN ficticios,
   3 mandatos y recibos. ADR 007.
-- ⬜ **T2.5** Generación de remesa pain.008 `R-SEPA-02`, validada contra el esquema XSD.
+- ✅ **T2.5** Generación de remesa pain.008 `R-SEPA-02`, validada contra el esquema XSD.
+  Hecho: `cobros.sepa.pain008` (puro: dataclasses → XML pain.008.001.02, un bloque por
+  FRST/RCUR, textos SEPA) y `validar_pain008` con `lxml` contra el XSD oficial
+  (`cobros/sepa/pain.008.001.02.xsd`); hypothesis: siempre valida y la suma cuadra.
+  `cobros.Remesa` inmutable con el XML exacto; `cobros.remesas.crear_remesa` (recibos
+  pendientes que vencen hasta el cobro con mandato vigente; si el XML no valida, no se
+  guarda nada; recibo ↔ remesa + mandato + secuencia, restricción en la BD). En la página de
+  recibos: estado, "Crear remesa" (`cobros.add_remesa`) y descarga (`cobros.view_remesa`).
+  Nueva dependencia `lxml`. ADR 008.
 
 ## Fase 3 — Bancos y morosidad
 - ⬜ **T3.1** 🔀 Importar extractos Norma 43.
@@ -152,3 +160,7 @@ tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizad
   propietarios ofrece los de todos los despachos (el modelo rechaza los ajenos al validar).
 - Recibos: si un recibo se generó para el titular equivocado (titularidad mal cargada), no hay
   forma de anularlo y volver a generarlo.
+- Remesas: no se pueden anular (si el banco rechaza el fichero entero, habría que devolver
+  sus recibos a pendientes). Sin plazos de presentación ni días hábiles (ver R-SEPA-02).
+- Remesas: solo pain.008.001.02; si un banco exige una versión nueva (.001.08), añadirla.
+- Mandatos: no se controla la caducidad por falta de uso (36 meses, EPC) ni el preaviso.

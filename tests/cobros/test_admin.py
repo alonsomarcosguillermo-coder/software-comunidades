@@ -103,3 +103,14 @@ def test_admin_de_emisiones_solo_lectura(cliente_admin, presupuesto_b):
     html = cliente_admin.get(f"/admin/cobros/emision/{emision.pk}/change/").content.decode()
     assert 'name="cuotas-0-importe"' not in html
     assert cliente_admin.get("/admin/cobros/emision/add/").status_code == 403
+
+
+def test_admin_de_mandatos_recibos_y_remesas_carga(cliente_admin):
+    for url in (
+        "/admin/cobros/mandato/",
+        "/admin/cobros/mandato/add/",
+        "/admin/cobros/recibo/",
+        "/admin/cobros/remesa/",
+    ):
+        assert cliente_admin.get(url).status_code == 200, url
+    assert cliente_admin.get("/admin/cobros/remesa/add/").status_code == 403

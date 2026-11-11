@@ -68,6 +68,8 @@ GRUPOS = {
         *_todos("cobros", "mandato"),
         "cobros.view_recibo",
         "cobros.add_recibo",
+        "cobros.view_remesa",
+        "cobros.add_remesa",
     ],
     "Empleado del despacho": [
         "fincas.view_comunidad",
@@ -91,6 +93,7 @@ GRUPOS = {
         "cobros.view_cuotaderrama",
         "cobros.view_mandato",
         "cobros.view_recibo",
+        "cobros.view_remesa",
     ],
     "Vecino": [],  # el portal del vecino llega en la Fase 5
 }

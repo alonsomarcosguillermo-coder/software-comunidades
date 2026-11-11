@@ -14,13 +14,16 @@ entonces tiene asiento contable y cuotas, y no se puede cambiar ni borrar.
 Recibos y mandatos SEPA (T2.4): de cada cuota (ordinaria o de derrama) sale un recibo, que
 paga el titular del inmueble. Si ese propietario tiene un mandato SEPA vigente, el recibo
 se puede domiciliar (cobrar por remesa).
+
+Remesas (T2.5): un fichero pain.008 con recibos domiciliados, que se guarda tal cual se
+entregó al banco y no cambia.
 """
 
 from datetime import date
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
-from django.core.validators import MaxValueValidator, MinValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models
 from django.db.models import Q
 
@@ -414,6 +417,14 @@ class MandatoQuerySet(models.QuerySet):
         )
 
 
+# Identificadores que viajan en la remesa (referencia de mandato): sin espacios y con el
+# juego de caracteres SEPA.
+validar_id_sepa = RegexValidator(
+    r"^[A-Za-z0-9/\-?:().,'+]{1,35}$",
+    "Solo letras sin tilde, números y / - ? : ( ) . , ' + (sin espacios; máximo 35).",
+)
+
+
 class Mandato(models.Model):
     """Mandato SEPA (esquema CORE): el titular de una cuenta autoriza a la comunidad a
     cobrarle en ella los recibos de un propietario (R-SEPA-01).
@@ -426,7 +437,9 @@ class Mandato(models.Model):
     comunidad = models.ForeignKey(Comunidad, on_delete=models.PROTECT, related_name="mandatos")
     propietario = models.ForeignKey(Propietario, on_delete=models.PROTECT, related_name="mandatos")
     # Referencia única del mandato (UMR): la que verá el banco del deudor. Hasta 35 caracteres.
-    referencia = models.CharField("referencia del mandato", max_length=35)
+    referencia = models.CharField(
+        "referencia del mandato", max_length=35, validators=[validar_id_sepa]
+    )
     titular_cuenta = models.CharField("titular de la cuenta", max_length=70)
     iban = models.CharField("IBAN", max_length=34, validators=[validar_campo_iban])
     fecha_firma = models.DateField("fecha de firma")
@@ -505,6 +518,15 @@ class Recibo(models.Model):
     importe = models.DecimalField(max_digits=12, decimal_places=2)
     vencimiento = models.DateField()
     creado_en = models.DateTimeField(auto_now_add=True)
+    # T2.5 — Los pone `cobros.remesas.crear_remesa` (con `update()`, no con `save()`).
+    remesa = models.ForeignKey(
+        "Remesa", on_delete=models.PROTECT, null=True, blank=True, related_name="recibos"
+    )
+    mandato = models.ForeignKey(
+        Mandato, on_delete=models.PROTECT, null=True, blank=True, related_name="recibos"
+    )
+    # "FRST" (primer cobro con ese mandato) o "RCUR" (siguientes); vacío si no está remesado.
+    secuencia = models.CharField(max_length=4, blank=True)
 
     class Meta:
         verbose_name = "recibo"
@@ -517,6 +539,16 @@ class Recibo(models.Model):
                 condition=(Q(cuota__isnull=False) & Q(cuota_derrama__isnull=True))
                 | (Q(cuota__isnull=True) & Q(cuota_derrama__isnull=False)),
                 name="recibo_de_una_sola_cuota",
+            ),
+            # Remesado = con remesa, mandato y secuencia; pendiente = sin ninguno.
+            models.CheckConstraint(
+                condition=(Q(remesa__isnull=True) & Q(mandato__isnull=True) & Q(secuencia=""))
+                | (
+                    Q(remesa__isnull=False)
+                    & Q(mandato__isnull=False)
+                    & Q(secuencia__in=["FRST", "RCUR"])
+                ),
+                name="recibo_remesado_completo",
             ),
         ]
 
@@ -533,6 +565,47 @@ class Recibo(models.Model):
         """Identificador del recibo fuera de la aplicación (en la remesa, el EndToEndId)."""
         return f"REC-{self.comunidad_id}-{self.numero}"
 
+    @property
+    def estado(self) -> str:
+        # Cobrado y devuelto llegarán con la Fase 3 (bancos y morosidad).
+        return "remesado" if self.remesa_id else "pendiente"
+
+
+class Remesa(ModeloInmutable):
+    """Remesa SEPA de adeudos directos (R-SEPA-02): el fichero pain.008 que se sube al banco.
+
+    Se crea con `cobros.remesas.crear_remesa`. Guarda el XML exacto que se generó (y que se
+    validó contra el esquema), así que se puede volver a descargar idéntico. Es inmutable.
+    """
+
+    comunidad = models.ForeignKey(Comunidad, on_delete=models.PROTECT, related_name="remesas")
+    numero = models.PositiveIntegerField("número")  # correlativo dentro de la comunidad
+    fecha_cobro = models.DateField("fecha de cobro")
+    # Identificador del mensaje (MsgId): único para el banco.
+    mensaje_id = models.CharField("identificador del mensaje", max_length=35, unique=True)
+    xml = models.TextField("fichero pain.008")
+    num_recibos = models.PositiveIntegerField("número de recibos")
+    total = models.DecimalField(max_digits=12, decimal_places=2)
+    creada_en = models.DateTimeField(auto_now_add=True)
+
+    objects = InmutableQuerySet.as_manager()
+
+    class Meta:
+        verbose_name = "remesa SEPA"
+        verbose_name_plural = "remesas SEPA"
+        ordering = ["comunidad", "-numero"]
+        constraints = [
+            models.UniqueConstraint(fields=["comunidad", "numero"], name="remesa_numero_unico"),
+            models.CheckConstraint(condition=Q(total__gt=0), name="remesa_total_positivo"),
+        ]
+
+    def __str__(self) -> str:
+        return f"Remesa {self.numero} · {self.comunidad} · cobro {self.fecha_cobro}"
+
+    @property
+    def nombre_fichero(self) -> str:
+        return f"remesa-{self.comunidad_id}-{self.numero}-{self.fecha_cobro:%Y%m%d}.xml"
+
 
 # Camino desde cada modelo hasta su despacho (ver core.aislamiento y ADR 002).
 CAMPO_DESPACHO = {
@@ -544,4 +617,5 @@ CAMPO_DESPACHO = {
     CuotaDerrama: "derrama__comunidad__despacho",
     Mandato: "comunidad__despacho",
     Recibo: "comunidad__despacho",
+    Remesa: "comunidad__despacho",
 }

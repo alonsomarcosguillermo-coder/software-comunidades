@@ -22,4 +22,10 @@ urlpatterns = [
         views.GenerarRecibos.as_view(),
         name="generar_recibos",
     ),
+    path("<int:pk>/remesas/crear/", views.CrearRemesa.as_view(), name="crear_remesa"),
+    path(
+        "<int:pk>/remesas/<int:remesa_pk>/fichero/",
+        views.DescargarRemesa.as_view(),
+        name="descargar_remesa",
+    ),
 ]

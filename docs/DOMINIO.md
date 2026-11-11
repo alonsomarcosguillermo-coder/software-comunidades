@@ -78,3 +78,12 @@ Interpretación aplicada en T2.4 (pendiente de validar con un profesional):
 - Pendiente: caducidad del mandato sin uso (el EPC habla de 36 meses) y preaviso al deudor.
 - **R-SEPA-02** ⚠️ La remesa se genera en formato ISO 20022 pain.008 (esquema básico CORE).
   Detalle de versión y plazos de presentación a definir con la documentación del banco.
+
+Interpretación aplicada en T2.5 (pendiente de validar con la documentación del banco):
+- Versión pain.008.001.02 (base del Cuaderno 19.14 XML de la AEB), validada contra su XSD.
+- FRST para el primer cobro con un mandato y RCUR para los siguientes. Pregunta: ¿el banco
+  acepta RCUR también en el primero (permitido por el EPC desde 2016)?
+- Solo se exige que la fecha de cobro sea posterior a hoy. Pendiente: antelación mínima de
+  presentación (D-1 hábil en CORE según el EPC) y calendario TARGET2 de días hábiles.
+- Un recibo entra en la remesa si vence hasta la fecha de cobro y su pagador tiene mandato
+  vigente en esa fecha.

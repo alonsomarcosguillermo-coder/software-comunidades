@@ -32,7 +32,7 @@
     <table class="tabla">
       <thead>
         <tr><th>Nº</th><th>Concepto</th><th>Pagador</th><th>Vence</th>
-          <th class="num">Importe</th><th>Domiciliación</th></tr>
+          <th class="num">Importe</th><th>Domiciliación</th><th>Estado</th></tr>
       </thead>
       <tbody>
         {% for recibo, mandato in filas %}
@@ -49,6 +49,13 @@
                 <span class="estado mal">Sin mandato</span>
               {% endif %}
             </td>
+            <td>
+              {% if recibo.remesa %}
+                <span class="estado ok">Remesa {{ recibo.remesa.numero }} ({{ recibo.secuencia }})</span>
+              {% else %}
+                <span class="estado">Pendiente</span>
+              {% endif %}
+            </td>
           </tr>
         {% endfor %}
       </tbody>
@@ -56,6 +63,45 @@
   {% else %}
     <p class="vacio">Todavía no hay recibos. Se generan a partir de las cuotas emitidas
       (presupuestos y derramas).</p>
+  {% endif %}
+</section>
+
+{# R-SEPA-02: remesas de adeudos directos (fichero pain.008 para la banca online). #}
+<section class="tarjeta">
+  <div class="titulo-seccion">
+    <h2>Remesas SEPA</h2>
+    {% if puede_remesar %}
+      <form method="post" class="emitir" action="{% url 'cobros:crear_remesa' comunidad.pk %}">
+        {% csrf_token %}
+        <label for="fecha_cobro">Fecha de cobro</label>
+        <input type="date" id="fecha_cobro" name="fecha_cobro"
+               value="{{ cobro_sugerido|date:'Y-m-d' }}" required>
+        <button type="submit">Crear remesa</button>
+      </form>
+    {% endif %}
+  </div>
+  <p class="vacio">Incluye los recibos pendientes que vencen hasta la fecha de cobro y cuyo
+    pagador tiene un mandato vigente. El fichero se valida contra el esquema oficial.</p>
+  {% if remesas %}
+    <table class="tabla">
+      <thead><tr><th>Nº</th><th>Cobro</th><th class="num">Recibos</th>
+        <th class="num">Total</th><th>Fichero</th></tr></thead>
+      <tbody>
+        {% for remesa in remesas %}
+          <tr>
+            <td>{{ remesa.numero }}</td>
+            <td>{{ remesa.fecha_cobro|date:"j/n/Y" }}</td>
+            <td class="num">{{ remesa.num_recibos }}</td>
+            <td class="num">{{ remesa.total }} €</td>
+            <td>
+              {% if puede_descargar %}
+                <a href="{% url 'cobros:descargar_remesa' comunidad.pk remesa.pk %}">{{ remesa.nombre_fichero }}</a>
+              {% else %}—{% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   {% endif %}
 </section>
 

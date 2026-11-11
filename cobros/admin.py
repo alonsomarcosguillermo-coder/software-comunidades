@@ -2,7 +2,17 @@ from django.contrib import admin, messages
 from django.utils import timezone
 
 from .derramas import DerramaInvalida, emitir_derrama
-from .models import Cuota, CuotaDerrama, Derrama, Emision, Mandato, Partida, Presupuesto, Recibo
+from .models import (
+    Cuota,
+    CuotaDerrama,
+    Derrama,
+    Emision,
+    Mandato,
+    Partida,
+    Presupuesto,
+    Recibo,
+    Remesa,
+)
 from .servicios import total_partidas
 
 # Nota (ADR 002): el admin de Django NO filtra por despacho. Es solo para el superusuario.
@@ -207,3 +217,12 @@ class ReciboAdmin(SoloLecturaMixin, admin.ModelAdmin):
     list_filter = ["comunidad__despacho", "comunidad"]
     search_fields = ["concepto", "propietario__nombre", "inmueble__referencia"]
     date_hierarchy = "vencimiento"
+
+
+@admin.register(Remesa)
+class RemesaAdmin(SoloLecturaMixin, admin.ModelAdmin):
+    """Remesas: solo lectura. El fichero se descarga desde la página de recibos."""
+
+    list_display = ["numero", "comunidad", "fecha_cobro", "num_recibos", "total", "creada_en"]
+    list_filter = ["comunidad__despacho", "comunidad"]
+    exclude = ["xml"]  # lleva IBAN completos; no hace falta enseñarlo aquí

@@ -222,3 +222,18 @@ def test_la_demo_tiene_mandatos_y_recibos(demo):
     recibos = Recibo.objects.filter(comunidad=comunidad)
     assert recibos.exists()
     assert not recibos.filter(cuota__isnull=True, cuota_derrama__isnull=True).exists()
+
+
+@pytest.mark.django_db
+def test_con_la_demo_se_puede_crear_una_remesa_valida(demo):
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from cobros.remesas import crear_remesa
+    from cobros.sepa.pain008 import validar_pain008
+
+    comunidad = Comunidad.objects.get(nombre="CP Calle Ficticia 1")
+    remesa = crear_remesa(comunidad, timezone.localdate() + timedelta(days=7))
+    assert remesa.num_recibos > 0
+    validar_pain008(remesa.xml.encode())

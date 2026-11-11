@@ -1,10 +1,12 @@
 from dataclasses import dataclass
+from datetime import timedelta
 from decimal import Decimal
 
 from django import forms
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.db.models import Prefetch, Sum
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.utils import timezone
 from django.views import View
@@ -25,6 +27,7 @@ from .emision import EmisionInvalida, emitir_cuotas
 from .models import CAMPO_DESPACHO as CAMPO_DESPACHO_COBROS
 from .models import Derrama, Emision, Presupuesto
 from .recibos import generar_recibos
+from .remesas import RemesaInvalida, crear_remesa
 from .sepa.identificadores import iban_oculto
 from .servicios import EstadoFondoReserva, estado_fondo_reserva, total_partidas
 
@@ -191,7 +194,9 @@ class RecibosComunidad(FiltradoPorDespachoMixin, DetailView):
         mandatos = list(comunidad.mandatos.select_related("propietario"))
         # R-SEPA-01: el mandato vigente hoy de cada propietario (como mucho uno sin baja).
         vigentes = {m.propietario_id: m for m in mandatos if m.vigente_en(hoy)}
-        recibos = comunidad.recibos.select_related("inmueble", "propietario").order_by("-numero")
+        recibos = comunidad.recibos.select_related("inmueble", "propietario", "remesa").order_by(
+            "-numero"
+        )
         filas = [(recibo, vigentes.get(recibo.propietario_id)) for recibo in recibos]
         return super().get_context_data(
             filas=filas,
@@ -199,6 +204,11 @@ class RecibosComunidad(FiltradoPorDespachoMixin, DetailView):
             hoy=hoy,
             iban_cobros=iban_oculto(comunidad.iban_cobros) if comunidad.iban_cobros else "",
             puede_generar=self.request.user.has_perm("cobros.add_recibo"),
+            # T2.5 — Remesas
+            remesas=comunidad.remesas.all(),
+            puede_remesar=self.request.user.has_perm("cobros.add_remesa"),
+            puede_descargar=self.request.user.has_perm("cobros.view_remesa"),
+            cobro_sugerido=hoy + timedelta(days=7),
             **kwargs,
         )
 
@@ -226,3 +236,48 @@ class GenerarRecibos(LoginRequiredMixin, PermissionRequiredMixin, View):
                 f"Sin recibo porque el inmueble no tenía titular en el vencimiento: {inmuebles}.",
             )
         return redirect("cobros:recibos_comunidad", pk=pk)
+
+
+# --- Remesas SEPA (T2.5) ---------------------------------------------------------------
+
+
+class FormularioRemesa(forms.Form):
+    fecha_cobro = forms.DateField()
+
+
+class CrearRemesa(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """POST: crea la remesa pain.008 de los recibos domiciliables (PRG con mensajes)."""
+
+    permission_required = "cobros.add_remesa"
+    http_method_names = ["post"]
+
+    def post(self, request, pk):
+        comunidad = _comunidad_del_usuario(request, pk)
+        formulario = FormularioRemesa(request.POST)
+        if not formulario.is_valid():
+            messages.error(request, "Indica una fecha de cobro válida.")
+            return redirect("cobros:recibos_comunidad", pk=pk)
+        try:
+            remesa = crear_remesa(comunidad, formulario.cleaned_data["fecha_cobro"])
+        except RemesaInvalida as error:
+            messages.error(request, str(error))
+        else:
+            messages.success(
+                request,
+                f"Creada la remesa {remesa.numero}: {remesa.num_recibos} recibos, "
+                f"{remesa.total} €. Descarga el fichero y súbelo a la banca online.",
+            )
+        return redirect("cobros:recibos_comunidad", pk=pk)
+
+
+class DescargarRemesa(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """GET: el fichero pain.008 tal cual se generó. Lleva IBAN completos: exige permiso."""
+
+    permission_required = "cobros.view_remesa"
+
+    def get(self, request, pk, remesa_pk):
+        comunidad = _comunidad_del_usuario(request, pk)
+        remesa = get_object_or_404(comunidad.remesas, pk=remesa_pk)
+        respuesta = HttpResponse(remesa.xml.encode("utf-8"), content_type="application/xml")
+        respuesta["Content-Disposition"] = f'attachment; filename="{remesa.nombre_fichero}"'
+        return respuesta
