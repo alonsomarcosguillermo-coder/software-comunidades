@@ -33,6 +33,10 @@
       <p class="aviso">Tu usuario no está asignado a ningún despacho, así que no verás datos.
         Pide a un administrador que te asigne uno.</p>
     {% endif %}
+    {# Mensajes de una sola vez (p. ej. "Emitidas las cuotas..."), del framework de Django. #}
+    {% for mensaje in messages %}
+      <p class="mensaje {{ mensaje.tags }}">{{ mensaje }}</p>
+    {% endfor %}
     {% block contenido %}{% endblock %}
   </main>
 </body>

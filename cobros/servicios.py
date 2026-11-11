@@ -1,8 +1,10 @@
 """Lógica de negocio de cobros, como funciones puras (sin base de datos ni web)."""
 
-from collections.abc import Iterable
+from collections.abc import Hashable, Iterable, Mapping
 from dataclasses import dataclass
 from decimal import ROUND_UP, Decimal
+
+from fincas.servicios import repartir
 
 CERO = Decimal("0.00")
 CENTIMO = Decimal("0.01")
@@ -59,3 +61,72 @@ def estado_fondo_reserva(saldo: Decimal, presupuesto: Decimal) -> EstadoFondoRes
     _exigir_decimal(saldo, presupuesto)
     minimo = minimo_fondo_reserva(presupuesto)
     return EstadoFondoReserva(saldo=saldo, minimo=minimo, faltante=max(minimo - saldo, CERO))
+
+
+# --- Cuotas ordinarias (T2.2) ---------------------------------------------------------
+
+
+def plan_de_cuotas[K: Hashable](
+    total: Decimal, coeficientes: Mapping[K, Decimal], periodos: int
+) -> dict[int, dict[K, Decimal]]:
+    """Cuotas de todo el año: {periodo (1..N): {inmueble: importe}}.
+
+    Dos repartos con R-REP-02 (`repartir`):
+      1. `total` (anual) entre los inmuebles, por coeficiente.
+      2. La parte anual de cada inmueble, a partes iguales entre los `periodos`. Los
+         céntimos sobrantes van a los primeros periodos.
+    Así cada inmueble paga en el año exactamente su parte, y la suma de todo es `total`.
+    """
+    if periodos < 1:
+        raise ValueError(f"El número de periodos debe ser al menos 1, no {periodos}.")
+    anual = repartir(total, coeficientes)
+    iguales = {periodo: Decimal(1) for periodo in range(1, periodos + 1)}
+    plan: dict[int, dict[K, Decimal]] = {periodo: {} for periodo in iguales}
+    for inmueble, importe in anual.items():
+        for periodo, parte in repartir(importe, iguales).items():
+            plan[periodo][inmueble] = parte
+    return plan
+
+
+def cuotas_del_periodo[K: Hashable](
+    total: Decimal, coeficientes: Mapping[K, Decimal], periodos: int, periodo: int
+) -> dict[K, Decimal]:
+    """Cuotas de un periodo (1..`periodos`) del plan anual. Ver `plan_de_cuotas`."""
+    if not 1 <= periodo <= periodos:
+        raise ValueError(f"El periodo {periodo} no está entre 1 y {periodos}.")
+    return plan_de_cuotas(total, coeficientes, periodos)[periodo]
+
+
+def desglose_contable(
+    emitido: Decimal, *, gastos: Decimal, aportacion: Decimal
+) -> tuple[Decimal, Decimal]:
+    """Parte de lo `emitido` que es ingreso por cuotas y parte que va al fondo de reserva.
+
+    En la misma proporción que en el presupuesto (`gastos` : `aportacion`), con R-REP-02
+    para que las dos partes sumen exactamente `emitido`. Devuelve (ingreso, fondo).
+    """
+    _exigir_decimal(emitido, gastos, aportacion)
+    pesos = {"1-ingreso": gastos, "2-fondo": aportacion}
+    pesos = {clave: peso for clave, peso in pesos.items() if peso > 0}
+    if not pesos:
+        raise ValueError("El presupuesto no tiene importes que repartir.")
+    partes = repartir(emitido, pesos)
+    return partes.get("1-ingreso", CERO), partes.get("2-fondo", CERO)
+
+
+def desglose_del_periodo(
+    totales: Mapping[int, Decimal], periodo: int, *, gastos: Decimal, aportacion: Decimal
+) -> tuple[Decimal, Decimal]:
+    """(ingreso, fondo) del `periodo`, dados los `totales` emitidos en cada periodo del plan.
+
+    Se desglosa lo acumulado hasta este periodo y se resta lo acumulado hasta el anterior:
+    así, al emitir todos los periodos, el fondo recibe EXACTAMENTE `aportacion` y los
+    ingresos EXACTAMENTE `gastos`, sin que se acumulen céntimos de redondeo.
+    """
+    if periodo not in totales:
+        raise ValueError(f"El periodo {periodo} no está en el plan.")
+    hasta = sum((t for p, t in totales.items() if p <= periodo), CERO)
+    antes = sum((t for p, t in totales.items() if p < periodo), CERO)
+    ingreso, fondo = desglose_contable(hasta, gastos=gastos, aportacion=aportacion)
+    ingreso_antes, fondo_antes = desglose_contable(antes, gastos=gastos, aportacion=aportacion)
+    return ingreso - ingreso_antes, fondo - fondo_antes

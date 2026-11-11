@@ -27,6 +27,7 @@ def _datos(comunidad, partidas, fecha_aprobacion=""):
         "ejercicio": "2027",
         "fecha_aprobacion": fecha_aprobacion,
         "aportacion_fondo_reserva": "100.00",
+        "periodos": "4",
         "partidas-TOTAL_FORMS": str(len(partidas)),
         "partidas-INITIAL_FORMS": "0",
         "partidas-MIN_NUM_FORMS": "0",
@@ -88,3 +89,17 @@ def test_la_lista_muestra_los_totales(cliente_admin, presupuesto_a):
     html = cliente_admin.get(URL_LISTA).content.decode()
     assert "4000.00" in html or "4000,00" in html
     assert "4500.00" in html or "4500,00" in html
+
+
+def test_admin_de_emisiones_solo_lectura(cliente_admin, presupuesto_b):
+    from cobros.emision import emitir_cuotas
+    from fincas.models import Inmueble
+
+    Inmueble.objects.create(
+        comunidad=presupuesto_b.comunidad, tipo="piso", referencia="1", coeficiente=D("100")
+    )
+    emision = emitir_cuotas(presupuesto_b, 1, date(2026, 2, 5))
+    assert cliente_admin.get("/admin/cobros/emision/").status_code == 200
+    html = cliente_admin.get(f"/admin/cobros/emision/{emision.pk}/change/").content.decode()
+    assert 'name="cuotas-0-importe"' not in html
+    assert cliente_admin.get("/admin/cobros/emision/add/").status_code == 403

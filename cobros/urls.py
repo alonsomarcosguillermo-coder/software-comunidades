@@ -10,4 +10,9 @@ urlpatterns = [
         views.PresupuestosComunidad.as_view(),
         name="presupuestos_comunidad",
     ),
+    path(
+        "<int:pk>/presupuestos/<int:presupuesto_pk>/emitir/",
+        views.EmitirCuotas.as_view(),
+        name="emitir_cuotas",
+    ),
 ]
