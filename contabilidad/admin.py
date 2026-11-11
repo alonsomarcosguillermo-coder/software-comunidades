@@ -13,8 +13,8 @@ CERO = Value(Decimal("0.00"), output_field=DecimalField(max_digits=12, decimal_p
 
 @admin.register(Cuenta)
 class CuentaAdmin(admin.ModelAdmin):
-    list_display = ["codigo", "nombre", "comunidad", "saldo"]
-    list_filter = ["comunidad__despacho", "comunidad"]
+    list_display = ["codigo", "nombre", "comunidad", "es_fondo_reserva", "saldo"]
+    list_filter = ["comunidad__despacho", "comunidad", "es_fondo_reserva"]
     search_fields = ["codigo", "nombre", "comunidad__nombre"]
 
     def get_queryset(self, request):

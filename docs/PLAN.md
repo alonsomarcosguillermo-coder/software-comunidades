@@ -49,7 +49,13 @@ tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizad
   ya existen. Tests con hasher rápido (`tests/conftest.py`).
 
 ## Fase 2 — Cobro
-- ⬜ **T2.1** Presupuesto anual por comunidad y partidas; fondo de reserva `R-RES-01`.
+- ✅ **T2.1** Presupuesto anual por comunidad y partidas; fondo de reserva `R-RES-01`.
+  Hecho: app `cobros` con `Presupuesto` (ejercicio, fecha de aprobación R-PRE-01, aportación
+  al fondo) y `Partida`; aprobado ⇒ importes fijos (modelo + admin en solo lectura).
+  `Cuenta.es_fondo_reserva` (una por comunidad); R-RES-01 puro en `cobros.servicios`
+  (mínimo redondeado hacia arriba, hypothesis) y con la BD en `cobros.consultas`. Página
+  `/comunidades/<id>/presupuestos/` con partidas, totales, estado del fondo y previsión.
+  `cargar_demo` añade presupuestos y un fondo insuficiente. ADR 004.
 - ⬜ **T2.2** 🔀 Emisión de cuotas ordinarias por periodo (usa T1.3), con asientos contables.
 - ⬜ **T2.3** 🔀 Derramas (importe total, plazos, grupo de reparto).
 - ⬜ **T2.4** Recibos y mandatos SEPA `R-SEPA-01`.
@@ -91,3 +97,10 @@ tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizad
 - Los grupos (roles) y sus permisos solo existen en `cargar_demo`. Cuando se definan los roles
   reales, crearlos con una migración de datos y que `cargar_demo` los reutilice.
 - La lista de comunidades no tiene paginación (hará falta con muchas comunidades).
+- Presupuestos: se crean y editan solo en el admin (sin filtro por despacho). Falta una vista
+  propia de alta/edición para el administrador de fincas.
+- Presupuestos aprobados: la protección es solo en Python (`QuerySet.update()` de partidas la
+  esquiva). T2.2 debe impedir quitar la aprobación si ya hay cuotas emitidas.
+- Partidas sin grupo de reparto (R-REP-01) ni cuenta de gasto asociada: probablemente T2.3.
+- El saldo del fondo de reserva cuenta todos los apuntes, también los de fecha futura.
+- Pregunta pendiente para `DOMINIO.md`: base del 10 % de R-RES-01 (ver nota bajo R-PRE-01).

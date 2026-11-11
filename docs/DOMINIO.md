@@ -22,6 +22,13 @@ Ninguna regla está validada todavía. Antes de cualquier uso real, revisar toda
   presupuesto ordinario (art. 9.1.f LPH).
 - **R-PRE-01** ⚠️ El presupuesto ordinario se aprueba en la junta ordinaria anual (art. 16.1 LPH).
 
+Interpretación aplicada en T2.1 (pendiente de validar con un profesional):
+- "Último presupuesto ordinario" = el aprobado del ejercicio más reciente; un borrador no cuenta.
+- La base del 10 % es la suma de las partidas de gasto, SIN la aportación al fondo de reserva.
+  Pregunta: ¿se incluye la aportación? ¿Y los ingresos que no son cuotas?
+- El mínimo se redondea hacia arriba al céntimo (es un mínimo: "no inferior").
+- El fondo es el saldo acreedor de la cuenta contable marcada como fondo de reserva.
+
 ## Juntas y votaciones
 - **R-JUN-01** ⚠️ Junta ordinaria al menos una vez al año (art. 16.1 LPH).
 - **R-JUN-02** ⚠️ Convocatoria de junta ordinaria con al menos 6 días de antelación; extraordinarias

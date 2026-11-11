@@ -8,6 +8,8 @@ from django.contrib.auth.models import Group
 from django.core.management import CommandError, call_command
 from django.urls import reverse
 
+from cobros.consultas import fondo_reserva_de
+from cobros.models import Partida, Presupuesto
 from contabilidad.models import Apunte, Asiento, Cuenta
 from core.management.commands.cargar_demo import CLAVE_DEMO
 from core.models import Despacho, Usuario
@@ -24,6 +26,8 @@ MODELOS = [
     Cuenta,
     Asiento,
     Apunte,
+    Presupuesto,
+    Partida,
 ]
 
 
@@ -150,3 +154,18 @@ def test_aislamiento_con_datos_de_demo(demo, client):
     client.login(username="admin.beta", password=CLAVE_DEMO)
     comunidades = client.get(reverse("fincas:lista_comunidades")).context["comunidades"]
     assert {c.despacho.nombre for c in comunidades} == {"Fincas Beta"}
+
+
+@pytest.mark.django_db
+def test_crea_presupuestos_aprobados_y_borradores(demo):
+    assert Presupuesto.objects.aprobados().count() == 2
+    assert Presupuesto.objects.filter(fecha_aprobacion__isnull=True).count() == 1
+    assert not Presupuesto.objects.filter(partidas__isnull=True).exists()
+
+
+@pytest.mark.django_db
+def test_r_res_01_la_demo_muestra_un_fondo_de_reserva_insuficiente(demo):
+    fondo = fondo_reserva_de(Comunidad.objects.get(nombre="CP Calle Ficticia 1"))
+    assert fondo.saldo == Decimal("350.00")
+    assert fondo.estado.minimo == Decimal("491.00")
+    assert not fondo.estado.cumple

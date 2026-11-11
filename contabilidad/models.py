@@ -63,6 +63,10 @@ class Cuenta(models.Model):
     comunidad = models.ForeignKey(Comunidad, on_delete=models.PROTECT, related_name="cuentas")
     codigo = models.CharField("código", max_length=20)
     nombre = models.CharField(max_length=200)
+    # R-RES-01: la cuenta que recoge el fondo de reserva de la comunidad (como mucho una).
+    # Su saldo acreedor es el importe del fondo. Se marca en vez de fijar un código porque
+    # los códigos de cuenta son, de momento, texto libre.
+    es_fondo_reserva = models.BooleanField("es el fondo de reserva", default=False)
 
     class Meta:
         verbose_name = "cuenta"
@@ -71,6 +75,11 @@ class Cuenta(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=["comunidad", "codigo"], name="cuenta_codigo_unico_en_comunidad"
+            ),
+            models.UniqueConstraint(
+                fields=["comunidad"],
+                condition=Q(es_fondo_reserva=True),
+                name="cuenta_un_fondo_reserva_por_comunidad",
             ),
         ]
 

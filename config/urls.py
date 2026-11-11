@@ -10,5 +10,6 @@ urlpatterns = [
     path("entrar/", auth_views.LoginView.as_view(), name="login"),
     path("salir/", auth_views.LogoutView.as_view(), name="logout"),
     path("comunidades/", include("fincas.urls")),
+    path("comunidades/", include("cobros.urls")),
     path("admin/", admin.site.urls),
 ]

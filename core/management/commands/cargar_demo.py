@@ -2,7 +2,7 @@
 
 Crea dos despachos (Fincas Alfa, con 2 comunidades, y Fincas Beta, con 1, para poder ver
 el aislamiento entre despachos), grupos con permisos, usuarios, inmuebles, propietarios,
-titularidades y algo de contabilidad.
+titularidades, algo de contabilidad (con una cuenta de fondo de reserva) y presupuestos.
 
 Es idempotente: se puede ejecutar varias veces sin duplicar nada. Solo funciona con
 DEBUG activo, para no crear nunca usuarios con una clave conocida en producción.
@@ -16,6 +16,7 @@ from django.contrib.auth.models import Group, Permission
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
+from cobros.models import Partida, Presupuesto
 from contabilidad.models import Cuenta
 from contabilidad.registro import anular_asiento, registrar_asiento
 from contabilidad.servicios import Linea
@@ -44,6 +45,8 @@ GRUPOS = {
         *_todos("contabilidad", "cuenta"),
         "contabilidad.view_asiento",
         "contabilidad.view_apunte",
+        *_todos("cobros", "presupuesto"),
+        *_todos("cobros", "partida"),
     ],
     "Empleado del despacho": [
         "fincas.view_comunidad",
@@ -57,6 +60,8 @@ GRUPOS = {
         "contabilidad.view_cuenta",
         "contabilidad.view_asiento",
         "contabilidad.view_apunte",
+        "cobros.view_presupuesto",
+        "cobros.view_partida",
     ],
     "Vecino": [],  # el portal del vecino llega en la Fase 5
 }
@@ -104,7 +109,42 @@ CUENTAS = [
     ("622", "Limpieza"),
     ("628", "Suministros (luz)"),
     ("705", "Cuotas ordinarias"),
+    ("113", "Fondo de reserva"),  # código de ejemplo; lo que cuenta es `es_fondo_reserva`
 ]
+CUENTA_FONDO_RESERVA = "113"
+
+# comunidad -> [(ejercicio, fecha de aprobación o None, aportación al fondo, partidas)]
+# Con el fondo de demo (350 €), "CP Calle Ficticia 1" NO cumple R-RES-01 con su presupuesto
+# aprobado de 2026 (mínimo 491 €), pero con la aportación prevista en 2027 sí llegará.
+PRESUPUESTOS = {
+    "CP Calle Ficticia 1": [
+        (
+            2026,
+            date(2025, 12, 15),
+            "500.00",
+            [
+                ("Limpieza", "2160.00"),
+                ("Luz", "900.00"),
+                ("Seguro", "650.00"),
+                ("Mantenimiento del ascensor", "1200.00"),
+            ],
+        ),
+        (
+            2027,
+            None,
+            "300.00",
+            [
+                ("Limpieza", "2200.00"),
+                ("Luz", "950.00"),
+                ("Seguro", "680.00"),
+                ("Mantenimiento del ascensor", "1250.00"),
+            ],
+        ),
+    ],
+    "CP Avenida Inventada 2": [
+        (2026, date(2026, 1, 20), "100.00", [("Limpieza", "600.00"), ("Luz", "300.00")]),
+    ],
+}
 
 
 def _email(texto: str) -> str:
@@ -130,6 +170,7 @@ class Command(BaseCommand):
             self._usuarios(despachos)
             self._fincas(despachos)
             self._contabilidad()
+            self._presupuestos()
 
         self.stdout.write(self.style.SUCCESS("Datos de demo cargados."))
         self.stdout.write(f"Usuarios (clave «{CLAVE_DEMO}» si se acaban de crear):")
@@ -190,15 +231,30 @@ class Command(BaseCommand):
         comunidad = Comunidad.objects.get(nombre=COMUNIDAD_CON_CONTABILIDAD)
         cuentas = {
             codigo: Cuenta.objects.get_or_create(
-                comunidad=comunidad, codigo=codigo, defaults={"nombre": nombre}
+                comunidad=comunidad,
+                codigo=codigo,
+                defaults={"nombre": nombre, "es_fondo_reserva": codigo == CUENTA_FONDO_RESERVA},
             )[0]
             for codigo, nombre in CUENTAS
         }
-        if comunidad.asientos.exists():
-            return  # los asientos son inmutables: si ya hay, no se tocan
 
         def D(valor: str) -> Decimal:
             return Decimal(valor)
+
+        # Los asientos son inmutables: cada bloque solo se registra si aún no existe.
+        if not cuentas[CUENTA_FONDO_RESERVA].apuntes.exists():
+            # R-RES-01: el fondo de reserva es el saldo acreedor de su cuenta.
+            registrar_asiento(
+                comunidad,
+                date(2026, 1, 2),
+                "Saldo inicial del fondo de reserva",
+                [
+                    Linea(cuentas["572"], debe=D("350.00")),
+                    Linea(cuentas[CUENTA_FONDO_RESERVA], haber=D("350.00")),
+                ],
+            )
+        if comunidad.asientos.filter(concepto="Cuotas de enero emitidas").exists():
+            return
 
         registrar_asiento(
             comunidad,
@@ -229,3 +285,23 @@ class Command(BaseCommand):
             [Linea(cuentas["622"], debe=D("180.00")), Linea(cuentas["572"], haber=D("180.00"))],
         )
         anular_asiento(duplicado, date(2026, 2, 4))
+
+    def _presupuestos(self):
+        for nombre, presupuestos in PRESUPUESTOS.items():
+            comunidad = Comunidad.objects.get(nombre=nombre)
+            for ejercicio, aprobado_el, aportacion, partidas in presupuestos:
+                presupuesto, creado = Presupuesto.objects.get_or_create(
+                    comunidad=comunidad,
+                    ejercicio=ejercicio,
+                    defaults={"aportacion_fondo_reserva": Decimal(aportacion)},
+                )
+                if not creado:
+                    continue  # si ya existe (quizá aprobado), no se toca
+                for concepto, importe in partidas:
+                    Partida.objects.create(
+                        presupuesto=presupuesto, concepto=concepto, importe=Decimal(importe)
+                    )
+                # R-PRE-01: se aprueba después de añadir las partidas (luego quedan fijas).
+                if aprobado_el:
+                    presupuesto.fecha_aprobacion = aprobado_el
+                    presupuesto.save()

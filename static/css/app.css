@@ -105,6 +105,15 @@ button {
 .aviso { background: var(--aviso-fondo); padding: 0.75rem 1rem; border-radius: 6px; }
 .vacio { color: var(--suave); }
 
+/* Presupuestos (T2.1) */
+.migas { color: var(--suave); font-size: 0.9rem; }
+section.tarjeta { margin-bottom: 1.5rem; }
+section.tarjeta h2 { margin-top: 0; }
+.tabla tfoot th, .tabla tfoot td { border-bottom: 0; }
+.datos { display: grid; grid-template-columns: 1fr auto; gap: 0.25rem 1rem; max-width: 480px; }
+.datos dd { margin: 0; }
+
 @media (max-width: 640px) {
-  .tabla th:nth-child(2), .tabla td:nth-child(2) { display: none; }
+  /* En móvil, la lista de comunidades oculta la columna de dirección. */
+  #tabla-comunidades .tabla th:nth-child(2), #tabla-comunidades .tabla td:nth-child(2) { display: none; }
 }

@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block titulo %}Presupuestos · {{ comunidad.nombre }}{% endblock %}
+
+{% block contenido %}
+<p class="migas"><a href="{% url 'fincas:lista_comunidades' %}">Comunidades</a> › {{ comunidad.nombre }}</p>
+<h1>Presupuestos de {{ comunidad.nombre }}</h1>
+
+{# R-RES-01: fondo de reserva ≥ 10 % del último presupuesto ordinario aprobado. #}
+<section class="tarjeta">
+  <h2>Fondo de reserva</h2>
+  {% if fondo.estado %}
+    <dl class="datos">
+      <dt>Saldo actual (contabilidad)</dt><dd class="num">{{ fondo.saldo }} €</dd>
+      <dt>Mínimo (10 % de los gastos de {{ fondo.presupuesto.ejercicio }})</dt>
+      <dd class="num">{{ fondo.estado.minimo }} €</dd>
+    </dl>
+    {% if fondo.estado.cumple %}
+      <span class="estado ok">Cumple R-RES-01</span>
+    {% else %}
+      <span class="estado mal">Faltan {{ fondo.estado.faltante }} € para el mínimo legal</span>
+    {% endif %}
+  {% elif fondo.saldo is None %}
+    <p class="vacio">La comunidad no tiene ninguna cuenta contable marcada como fondo de
+      reserva, así que no se puede comprobar R-RES-01.</p>
+  {% else %}
+    <p class="vacio">Saldo actual: {{ fondo.saldo }} €. Todavía no hay ningún presupuesto
+      aprobado con el que comparar (R-RES-01).</p>
+  {% endif %}
+</section>
+
+{% for fila in filas %}
+  <section class="tarjeta">
+    <div class="titulo-seccion">
+      <h2>Ejercicio {{ fila.presupuesto.ejercicio }}</h2>
+      {% if fila.presupuesto.esta_aprobado %}
+        <span class="estado ok">Aprobado el {{ fila.presupuesto.fecha_aprobacion|date:"j/n/Y" }}</span>
+      {% else %}
+        <span class="estado">Borrador</span>
+      {% endif %}
+    </div>
+    <table class="tabla">
+      <thead><tr><th>Partida</th><th class="num">Importe</th></tr></thead>
+      <tbody>
+        {% for partida in fila.presupuesto.partidas.all %}
+          <tr><td>{{ partida.concepto }}</td><td class="num">{{ partida.importe }} €</td></tr>
+        {% empty %}
+          <tr><td colspan="2" class="vacio">Sin partidas.</td></tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr><th>Total gastos</th><th class="num">{{ fila.gastos }} €</th></tr>
+        <tr><td>Aportación al fondo de reserva</td>
+          <td class="num">{{ fila.presupuesto.aportacion_fondo_reserva }} €</td></tr>
+        <tr><th>Total a cobrar en cuotas</th><th class="num">{{ fila.total }} €</th></tr>
+      </tfoot>
+    </table>
+    {% if fila.prevision %}
+      <p>Previsión R-RES-01 (saldo actual + aportación prevista = {{ fila.prevision.saldo }} €,
+        mínimo {{ fila.prevision.minimo }} €):
+        {% if fila.prevision.cumple %}
+          <span class="estado ok">llegará al mínimo</span>
+        {% else %}
+          <span class="estado mal">faltarán {{ fila.prevision.faltante }} €</span>
+        {% endif %}
+      </p>
+    {% endif %}
+  </section>
+{% empty %}
+  <p class="vacio">Esta comunidad todavía no tiene presupuestos.</p>
+{% endfor %}
+{% endblock %}

@@ -14,7 +14,7 @@
       <tbody>
         {% for comunidad in comunidades %}
           <tr>
-            <td>{{ comunidad.nombre }}</td>
+            <td><a href="{% url 'cobros:presupuestos_comunidad' comunidad.pk %}">{{ comunidad.nombre }}</a></td>
             <td>{{ comunidad.direccion|default:"—" }}</td>
             <td class="num">{{ comunidad.num_inmuebles }}</td>
             <td class="num">{{ comunidad.suma_coeficientes|floatformat:4 }} %</td>
