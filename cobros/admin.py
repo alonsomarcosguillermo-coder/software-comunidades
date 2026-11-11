@@ -2,7 +2,7 @@ from django.contrib import admin, messages
 from django.utils import timezone
 
 from .derramas import DerramaInvalida, emitir_derrama
-from .models import Cuota, CuotaDerrama, Derrama, Emision, Partida, Presupuesto
+from .models import Cuota, CuotaDerrama, Derrama, Emision, Mandato, Partida, Presupuesto, Recibo
 from .servicios import total_partidas
 
 # Nota (ADR 002): el admin de Django NO filtra por despacho. Es solo para el superusuario.
@@ -177,3 +177,33 @@ class DerramaAdmin(admin.ModelAdmin):
                 self.message_user(request, f"{derrama}: {error}", messages.ERROR)
             else:
                 self.message_user(request, f"{derrama}: emitida.", messages.SUCCESS)
+
+
+# --- Mandatos y recibos (T2.4) ------------------------------------------------------------
+
+
+@admin.register(Mandato)
+class MandatoAdmin(admin.ModelAdmin):
+    """Alta de mandatos y baja (fecha de baja). Un mandato firmado no se modifica."""
+
+    list_display = ["referencia", "propietario", "comunidad", "cuenta", "fecha_firma", "fecha_baja"]
+    list_filter = ["comunidad__despacho", "comunidad"]
+    search_fields = ["referencia", "propietario__nombre", "titular_cuenta"]
+    autocomplete_fields = ["propietario"]
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj is None:
+            return []
+        return ["comunidad", "propietario", "referencia", "titular_cuenta", "iban", "fecha_firma"]
+
+    @admin.display(description="cuenta")
+    def cuenta(self, mandato):
+        return mandato.iban_oculto  # el IBAN completo, solo en la ficha
+
+
+@admin.register(Recibo)
+class ReciboAdmin(SoloLecturaMixin, admin.ModelAdmin):
+    list_display = ["numero", "comunidad", "inmueble", "propietario", "vencimiento", "importe"]
+    list_filter = ["comunidad__despacho", "comunidad"]
+    search_fields = ["concepto", "propietario__nombre", "inmueble__referencia"]
+    date_hierarchy = "vencimiento"

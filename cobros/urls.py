@@ -16,4 +16,10 @@ urlpatterns = [
         name="emitir_cuotas",
     ),
     path("<int:pk>/derramas/", views.DerramasComunidad.as_view(), name="derramas_comunidad"),
+    path("<int:pk>/recibos/", views.RecibosComunidad.as_view(), name="recibos_comunidad"),
+    path(
+        "<int:pk>/recibos/generar/",
+        views.GenerarRecibos.as_view(),
+        name="generar_recibos",
+    ),
 ]

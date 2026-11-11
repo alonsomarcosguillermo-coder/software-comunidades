@@ -24,6 +24,8 @@ from .derramas import (
 from .emision import EmisionInvalida, emitir_cuotas
 from .models import CAMPO_DESPACHO as CAMPO_DESPACHO_COBROS
 from .models import Derrama, Emision, Presupuesto
+from .recibos import generar_recibos
+from .sepa.identificadores import iban_oculto
 from .servicios import EstadoFondoReserva, estado_fondo_reserva, total_partidas
 
 
@@ -159,3 +161,68 @@ class DerramasComunidad(FiltradoPorDespachoMixin, DetailView):
                 )
             )
         return super().get_context_data(fichas=fichas, **kwargs)
+
+
+# --- Recibos y mandatos (T2.4) ---------------------------------------------------------
+
+
+def _comunidad_del_usuario(request, pk) -> Comunidad:
+    """La comunidad `pk` si es del despacho del usuario; si no, 404 (ADR 002)."""
+    comunidades = filtrar_por_despacho(
+        Comunidad.objects.all(), request.user, CAMPO_DESPACHO[Comunidad]
+    )
+    return get_object_or_404(comunidades, pk=pk)
+
+
+class RecibosComunidad(FiltradoPorDespachoMixin, DetailView):
+    """Recibos de una comunidad, si se pueden domiciliar, y sus mandatos SEPA (R-SEPA-01).
+
+    Los IBAN se muestran ocultos. Una comunidad de otro despacho da 404.
+    """
+
+    model = Comunidad
+    campo_despacho = CAMPO_DESPACHO[Comunidad]
+    context_object_name = "comunidad"
+    template_name = "cobros/recibos_comunidad.html"
+
+    def get_context_data(self, **kwargs):
+        comunidad = self.object
+        hoy = timezone.localdate()
+        mandatos = list(comunidad.mandatos.select_related("propietario"))
+        # R-SEPA-01: el mandato vigente hoy de cada propietario (como mucho uno sin baja).
+        vigentes = {m.propietario_id: m for m in mandatos if m.vigente_en(hoy)}
+        recibos = comunidad.recibos.select_related("inmueble", "propietario").order_by("-numero")
+        filas = [(recibo, vigentes.get(recibo.propietario_id)) for recibo in recibos]
+        return super().get_context_data(
+            filas=filas,
+            mandatos=mandatos,
+            hoy=hoy,
+            iban_cobros=iban_oculto(comunidad.iban_cobros) if comunidad.iban_cobros else "",
+            puede_generar=self.request.user.has_perm("cobros.add_recibo"),
+            **kwargs,
+        )
+
+
+class GenerarRecibos(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """POST: crea los recibos de las cuotas que aún no lo tienen (PRG con mensajes)."""
+
+    permission_required = "cobros.add_recibo"
+    http_method_names = ["post"]
+
+    def post(self, request, pk):
+        comunidad = _comunidad_del_usuario(request, pk)
+        resultado = generar_recibos(comunidad)
+        if resultado.creados:
+            messages.success(request, f"Generados {len(resultado.creados)} recibos.")
+        else:
+            messages.info(request, "No había cuotas sin recibo.")
+        if resultado.sin_titular:
+            inmuebles = ", ".join(
+                f"{inmueble.referencia} ({fecha:%d/%m/%Y})"
+                for inmueble, fecha in resultado.sin_titular
+            )
+            messages.warning(
+                request,
+                f"Sin recibo porque el inmueble no tenía titular en el vencimiento: {inmuebles}.",
+            )
+        return redirect("cobros:recibos_comunidad", pk=pk)

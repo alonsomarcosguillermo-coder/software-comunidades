@@ -9,7 +9,16 @@ from django.core.management import CommandError, call_command
 from django.urls import reverse
 
 from cobros.consultas import fondo_reserva_de
-from cobros.models import Cuota, CuotaDerrama, Derrama, Emision, Partida, Presupuesto
+from cobros.models import (
+    Cuota,
+    CuotaDerrama,
+    Derrama,
+    Emision,
+    Mandato,
+    Partida,
+    Presupuesto,
+    Recibo,
+)
 from contabilidad.models import Apunte, Asiento, Cuenta
 from core.management.commands.cargar_demo import CLAVE_DEMO
 from core.models import Despacho, Usuario
@@ -41,6 +50,8 @@ MODELOS = [
     MiembroGrupo,
     Derrama,
     CuotaDerrama,
+    Mandato,
+    Recibo,
 ]
 
 
@@ -201,3 +212,13 @@ def test_crea_un_grupo_de_reparto_y_derramas(demo):
     assert sum(emitida.cuotas.values_list("importe", flat=True)) == emitida.importe
     propuesta = Derrama.objects.get(grupo=grupo)
     assert not propuesta.esta_acordada and not propuesta.esta_emitida
+
+
+@pytest.mark.django_db
+def test_la_demo_tiene_mandatos_y_recibos(demo):
+    comunidad = Comunidad.objects.get(nombre="CP Calle Ficticia 1")
+    assert comunidad.identificador_acreedor()
+    assert Mandato.objects.filter(comunidad=comunidad).count() == 3
+    recibos = Recibo.objects.filter(comunidad=comunidad)
+    assert recibos.exists()
+    assert not recibos.filter(cuota__isnull=True, cuota_derrama__isnull=True).exists()

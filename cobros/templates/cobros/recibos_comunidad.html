@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block titulo %}Recibos · {{ comunidad.nombre }}{% endblock %}
+
+{% block contenido %}
+<p class="migas"><a href="{% url 'fincas:lista_comunidades' %}">Comunidades</a> ›
+  <a href="{% url 'cobros:presupuestos_comunidad' comunidad.pk %}">{{ comunidad.nombre }}</a> › Recibos</p>
+<div class="titulo-seccion">
+  <h1>Recibos de {{ comunidad.nombre }}</h1>
+  {% if puede_generar %}
+    <form method="post" action="{% url 'cobros:generar_recibos' comunidad.pk %}">
+      {% csrf_token %}
+      <button type="submit">Generar recibos de las cuotas emitidas</button>
+    </form>
+  {% endif %}
+</div>
+
+{# Datos de la comunidad como acreedora SEPA (necesarios para las remesas). #}
+<section class="tarjeta">
+  <h2>Cobro por domiciliación (SEPA)</h2>
+  <dl class="datos">
+    <dt>Identificador de acreedor</dt>
+    <dd>{{ comunidad.identificador_acreedor|default:"— (falta el NIF de la comunidad)" }}</dd>
+    <dt>Cuenta de cobro</dt>
+    <dd>{{ iban_cobros|default:"— (falta el IBAN de cobro)" }}</dd>
+  </dl>
+</section>
+
+<section class="tarjeta">
+  <h2>Recibos</h2>
+  {% if filas %}
+    <table class="tabla">
+      <thead>
+        <tr><th>Nº</th><th>Concepto</th><th>Pagador</th><th>Vence</th>
+          <th class="num">Importe</th><th>Domiciliación</th></tr>
+      </thead>
+      <tbody>
+        {% for recibo, mandato in filas %}
+          <tr>
+            <td>{{ recibo.numero }}</td>
+            <td>{{ recibo.concepto }}</td>
+            <td>{{ recibo.propietario.nombre }}</td>
+            <td>{{ recibo.vencimiento|date:"j/n/Y" }}</td>
+            <td class="num">{{ recibo.importe }} €</td>
+            <td>
+              {% if mandato %}
+                <span class="estado ok">{{ mandato.iban_oculto }}</span>
+              {% else %}
+                <span class="estado mal">Sin mandato</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="vacio">Todavía no hay recibos. Se generan a partir de las cuotas emitidas
+      (presupuestos y derramas).</p>
+  {% endif %}
+</section>
+
+{# R-SEPA-01: mandato firmado (referencia y fecha de firma) para poder domiciliar. #}
+<section class="tarjeta">
+  <h2>Mandatos SEPA</h2>
+  {% if mandatos %}
+    <table class="tabla">
+      <thead><tr><th>Referencia</th><th>Propietario</th><th>Titular de la cuenta</th>
+        <th>Cuenta</th><th>Firma</th><th>Estado</th></tr></thead>
+      <tbody>
+        {% for mandato in mandatos %}
+          <tr>
+            <td>{{ mandato.referencia }}</td>
+            <td>{{ mandato.propietario.nombre }}</td>
+            <td>{{ mandato.titular_cuenta }}</td>
+            <td>{{ mandato.iban_oculto }}</td>
+            <td>{{ mandato.fecha_firma|date:"j/n/Y" }}</td>
+            <td>
+              {% if mandato.fecha_baja %}
+                <span class="estado">Baja el {{ mandato.fecha_baja|date:"j/n/Y" }}</span>
+              {% elif mandato.fecha_firma > hoy %}
+                <span class="estado">Firma futura</span>
+              {% else %}
+                <span class="estado ok">Vigente</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="vacio">Ningún propietario ha firmado todavía un mandato SEPA.</p>
+  {% endif %}
+</section>
+{% endblock %}

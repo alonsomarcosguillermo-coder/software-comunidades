@@ -75,7 +75,17 @@ tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizad
   puro `servicios.plan_de_derrama` (R-REP-02 en dos pasos, hypothesis) y `vencimientos`.
   Página `/comunidades/<id>/derramas/` (reparto previsto o emitido), admin con acción
   "Emitir", `cargar_demo` con un grupo y dos derramas. ADR 006.
-- ⬜ **T2.4** Recibos y mandatos SEPA `R-SEPA-01`.
+- ✅ **T2.4** Recibos y mandatos SEPA `R-SEPA-01`.
+  Hecho: `cobros.Recibo` (uno por cuota ordinaria o de derrama, nº correlativo por
+  comunidad, inmutable, sin asiento) con `cobros.recibos.generar_recibos` (repetible; pagador
+  = titular en el vencimiento, `elegir_pagador` puro; inmuebles sin titular se avisan).
+  `cobros.Mandato` (referencia única, titular de la cuenta, IBAN validado, firma, baja; uno
+  activo por propietario; inmutable salvo la baja). `Comunidad.iban_cobros` y
+  `sufijo_acreedor`; `cobros.sepa.identificadores` (IBAN mod-97, identificador de acreedor
+  AT-02 con el ejemplo del EPC, `iban_oculto`, `texto_sepa`). Página
+  `/comunidades/<id>/recibos/` (IBAN siempre oculto) con botón "Generar recibos"
+  (`cobros.add_recibo`). Admin de mandatos y recibos. `cargar_demo` con NIF/IBAN ficticios,
+  3 mandatos y recibos. ADR 007.
 - ⬜ **T2.5** Generación de remesa pain.008 `R-SEPA-02`, validada contra el esquema XSD.
 
 ## Fase 3 — Bancos y morosidad
@@ -137,3 +147,8 @@ tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizad
   (R-REP-01) ya existen (T2.3) pero las cuotas ordinarias aún no los usan.
 - `cargar_demo` mantiene un asiento manual "Cuotas de enero emitidas" de T1.6 que ahora
   convive con la emisión real del primer trimestre.
+- Recibos: la página no tiene paginación ni filtros (por estado, vencimiento, propietario).
+- Mandatos: se dan de alta solo en el admin (sin filtro por despacho); el buscador de
+  propietarios ofrece los de todos los despachos (el modelo rechaza los ajenos al validar).
+- Recibos: si un recibo se generó para el titular equivocado (titularidad mal cargada), no hay
+  forma de anularlo y volver a generarlo.

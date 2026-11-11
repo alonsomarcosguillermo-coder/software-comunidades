@@ -10,6 +10,10 @@ Las emisiones y sus cuotas van unidas a un asiento contable y, como él, son inm
 
 Una derrama se edita libremente hasta que se emite (`cobros.derramas.emitir_derrama`): desde
 entonces tiene asiento contable y cuotas, y no se puede cambiar ni borrar.
+
+Recibos y mandatos SEPA (T2.4): de cada cuota (ordinaria o de derrama) sale un recibo, que
+paga el titular del inmueble. Si ese propietario tiene un mandato SEPA vigente, el recibo
+se puede domiciliar (cobrar por remesa).
 """
 
 from datetime import date
@@ -21,8 +25,9 @@ from django.db import models
 from django.db.models import Q
 
 from contabilidad.models import Asiento, InmutableQuerySet, ModeloInmutable
-from fincas.models import Comunidad, GrupoReparto, Inmueble
+from fincas.models import Comunidad, GrupoReparto, Inmueble, Propietario, validar_campo_iban
 
+from .sepa.identificadores import iban_oculto
 from .servicios import CERO, total_partidas, vencimientos
 
 
@@ -397,6 +402,138 @@ class CuotaDerrama(ModeloInmutable):
         return f"{self.inmueble} · plazo {self.plazo} · {self.importe} €"
 
 
+class DatosInmutables(ValidationError):
+    """Se ha intentado cambiar un dato que, una vez guardado, no puede cambiar."""
+
+
+class MandatoQuerySet(models.QuerySet):
+    def vigentes(self, fecha: date):
+        """R-SEPA-01: firmados en o antes de `fecha` y sin baja en esa fecha."""
+        return self.filter(fecha_firma__lte=fecha).filter(
+            Q(fecha_baja__isnull=True) | Q(fecha_baja__gt=fecha)
+        )
+
+
+class Mandato(models.Model):
+    """Mandato SEPA (esquema CORE): el titular de una cuenta autoriza a la comunidad a
+    cobrarle en ella los recibos de un propietario (R-SEPA-01).
+
+    El deudor es el titular de la cuenta, que puede no ser el propietario (p. ej. un
+    familiar). Una vez creado, solo se le puede dar de baja: si cambia la cuenta, se firma
+    un mandato nuevo. El IBAN es un dato personal: no aparece en `__str__` ni en logs.
+    """
+
+    comunidad = models.ForeignKey(Comunidad, on_delete=models.PROTECT, related_name="mandatos")
+    propietario = models.ForeignKey(Propietario, on_delete=models.PROTECT, related_name="mandatos")
+    # Referencia única del mandato (UMR): la que verá el banco del deudor. Hasta 35 caracteres.
+    referencia = models.CharField("referencia del mandato", max_length=35)
+    titular_cuenta = models.CharField("titular de la cuenta", max_length=70)
+    iban = models.CharField("IBAN", max_length=34, validators=[validar_campo_iban])
+    fecha_firma = models.DateField("fecha de firma")
+    fecha_baja = models.DateField("fecha de baja", null=True, blank=True)
+
+    objects = MandatoQuerySet.as_manager()
+
+    class Meta:
+        verbose_name = "mandato SEPA"
+        verbose_name_plural = "mandatos SEPA"
+        ordering = ["comunidad", "referencia"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["comunidad", "referencia"], name="mandato_referencia_unica"
+            ),
+            # Como mucho un mandato sin baja por propietario y comunidad.
+            models.UniqueConstraint(
+                fields=["comunidad", "propietario"],
+                condition=Q(fecha_baja__isnull=True),
+                name="mandato_un_activo_por_propietario",
+            ),
+            models.CheckConstraint(
+                condition=Q(fecha_baja__isnull=True) | Q(fecha_baja__gte=models.F("fecha_firma")),
+                name="mandato_baja_posterior_a_firma",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"Mandato {self.referencia} ({self.propietario})"
+
+    def save(self, *args, **kwargs):
+        self.iban = "".join(self.iban.split()).upper()
+        if self.pk is not None:
+            guardado = Mandato.objects.get(pk=self.pk)
+            campos = ["comunidad_id", "propietario_id", "referencia", "iban", "fecha_firma"]
+            if any(getattr(guardado, c) != getattr(self, c) for c in campos):
+                raise DatosInmutables(
+                    "Un mandato firmado no se modifica: dale de baja y registra uno nuevo."
+                )
+        super().save(*args, **kwargs)
+
+    def clean(self) -> None:
+        if self.comunidad_id and self.propietario_id:
+            if self.propietario.despacho_id != self.comunidad.despacho_id:
+                raise ValidationError("El propietario y la comunidad son de despachos distintos.")
+
+    @property
+    def iban_oculto(self) -> str:
+        return iban_oculto(self.iban)
+
+    def vigente_en(self, fecha: date) -> bool:
+        return self.fecha_firma <= fecha and (self.fecha_baja is None or self.fecha_baja > fecha)
+
+
+class Recibo(models.Model):
+    """Lo que un propietario debe pagar por una cuota (ordinaria o de derrama) de un inmueble.
+
+    Se crea con `cobros.recibos.generar_recibos` y sus datos no cambian. El estado (pendiente,
+    remesado...) lo dan sus relaciones, no un campo que se edite a mano.
+    """
+
+    comunidad = models.ForeignKey(Comunidad, on_delete=models.PROTECT, related_name="recibos")
+    # Correlativo dentro de la comunidad (1, 2, 3...). Lo asigna `generar_recibos`.
+    numero = models.PositiveIntegerField("número")
+    inmueble = models.ForeignKey(Inmueble, on_delete=models.PROTECT, related_name="recibos")
+    # Quien paga: el titular del inmueble en la fecha de vencimiento.
+    propietario = models.ForeignKey(Propietario, on_delete=models.PROTECT, related_name="recibos")
+    # De dónde sale: una cuota ordinaria O una cuota de derrama (exactamente una).
+    cuota = models.OneToOneField(
+        Cuota, on_delete=models.PROTECT, null=True, blank=True, related_name="recibo"
+    )
+    cuota_derrama = models.OneToOneField(
+        CuotaDerrama, on_delete=models.PROTECT, null=True, blank=True, related_name="recibo"
+    )
+    concepto = models.CharField(max_length=140)
+    importe = models.DecimalField(max_digits=12, decimal_places=2)
+    vencimiento = models.DateField()
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "recibo"
+        verbose_name_plural = "recibos"
+        ordering = ["comunidad", "numero"]
+        constraints = [
+            models.UniqueConstraint(fields=["comunidad", "numero"], name="recibo_numero_unico"),
+            models.CheckConstraint(condition=Q(importe__gt=0), name="recibo_importe_positivo"),
+            models.CheckConstraint(
+                condition=(Q(cuota__isnull=False) & Q(cuota_derrama__isnull=True))
+                | (Q(cuota__isnull=True) & Q(cuota_derrama__isnull=False)),
+                name="recibo_de_una_sola_cuota",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"Recibo {self.numero} · {self.inmueble.referencia} · {self.importe} €"
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise DatosInmutables("Los datos de un recibo no se modifican una vez emitido.")
+        super().save(*args, **kwargs)
+
+    @property
+    def referencia(self) -> str:
+        """Identificador del recibo fuera de la aplicación (en la remesa, el EndToEndId)."""
+        return f"REC-{self.comunidad_id}-{self.numero}"
+
+
 # Camino desde cada modelo hasta su despacho (ver core.aislamiento y ADR 002).
 CAMPO_DESPACHO = {
     Presupuesto: "comunidad__despacho",
@@ -405,4 +542,6 @@ CAMPO_DESPACHO = {
     Cuota: "emision__presupuesto__comunidad__despacho",
     Derrama: "comunidad__despacho",
     CuotaDerrama: "derrama__comunidad__despacho",
+    Mandato: "comunidad__despacho",
+    Recibo: "comunidad__despacho",
 }

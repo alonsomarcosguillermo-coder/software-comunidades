@@ -67,5 +67,14 @@ Interpretación aplicada en T2.1 (pendiente de validar con un profesional):
 ## Cobros SEPA (pendiente de detallar en la Fase 2)
 - **R-SEPA-01** ⚠️ Domiciliar un recibo exige un mandato SEPA firmado (identificador de mandato y
   fecha de firma) por cada titular de cuenta.
+
+Interpretación aplicada en T2.4 (pendiente de validar con un profesional):
+- El deudor del mandato es el titular de la cuenta, que puede no ser el propietario. Un
+  mandato por cuenta; si la cuenta tiene varios titulares, no se modela que firmen todos.
+- Un recibo lo paga el titular del inmueble en la fecha de vencimiento. Con cotitulares,
+  el que tenga mandato vigente (o el primero). Pregunta: ¿se emite a nombre de todos? Ver
+  también la pregunta sobre representante del inmueble en `PLAN.md`.
+- Un mandato firmado no se modifica: si cambia la cuenta, baja y mandato nuevo.
+- Pendiente: caducidad del mandato sin uso (el EPC habla de 36 meses) y preaviso al deudor.
 - **R-SEPA-02** ⚠️ La remesa se genera en formato ISO 20022 pain.008 (esquema básico CORE).
   Detalle de versión y plazos de presentación a definir con la documentación del banco.

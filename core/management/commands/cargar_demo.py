@@ -18,7 +18,9 @@ from django.db import transaction
 
 from cobros.derramas import emitir_derrama
 from cobros.emision import emitir_cuotas
-from cobros.models import Derrama, Partida, Presupuesto
+from cobros.models import Derrama, Mandato, Partida, Presupuesto
+from cobros.recibos import generar_recibos
+from cobros.sepa.identificadores import construir_iban
 from contabilidad.models import Cuenta
 from contabilidad.registro import anular_asiento, registrar_asiento
 from contabilidad.servicios import Linea
@@ -63,6 +65,9 @@ GRUPOS = {
         *_todos("fincas", "miembrogrupo"),
         *_todos("cobros", "derrama"),
         "cobros.view_cuotaderrama",
+        *_todos("cobros", "mandato"),
+        "cobros.view_recibo",
+        "cobros.add_recibo",
     ],
     "Empleado del despacho": [
         "fincas.view_comunidad",
@@ -84,6 +89,8 @@ GRUPOS = {
         "fincas.view_miembrogrupo",
         "cobros.view_derrama",
         "cobros.view_cuotaderrama",
+        "cobros.view_mandato",
+        "cobros.view_recibo",
     ],
     "Vecino": [],  # el portal del vecino llega en la Fase 5
 }
@@ -200,6 +207,14 @@ DERRAMAS = {
 }
 
 
+# T2.4 — Datos SEPA FICTICIOS: NIF de comunidad inventado e IBAN de una entidad inexistente
+# (9999), con dígitos de control válidos para que pasen la validación.
+NIF_DEMO = "H00000000"
+IBAN_COBROS_DEMO = construir_iban("ES", "99990000" + "100000000001")
+# Propietarios de la comunidad con contabilidad que han firmado un mandato SEPA.
+MANDATOS = ["Carmen Ejemplo", "Pablo Prueba", "Jorge Ficticio"]
+
+
 def _email(texto: str) -> str:
     """Email ficticio en example.com (dominio reservado para ejemplos)."""
     limpio = texto.lower().replace(" ", ".")
@@ -225,6 +240,7 @@ class Command(BaseCommand):
             self._contabilidad()
             self._presupuestos()
             self._derramas()
+            self._recibos()
 
         self.stdout.write(self.style.SUCCESS("Datos de demo cargados."))
         self.stdout.write(f"Usuarios (clave «{CLAVE_DEMO}» si se acaban de crear):")
@@ -394,3 +410,23 @@ class Command(BaseCommand):
                 # Si ya existía, no se toca (quizá ya está emitida y es inmutable).
                 if creada and emitir_el:
                     emitir_derrama(derrama, emitir_el)
+
+    def _recibos(self):
+        comunidad = Comunidad.objects.get(nombre=COMUNIDAD_CON_CONTABILIDAD)
+        if not comunidad.nif:
+            comunidad.nif = NIF_DEMO
+            comunidad.iban_cobros = IBAN_COBROS_DEMO
+            comunidad.save()
+        for n, nombre in enumerate(MANDATOS, start=1):
+            propietario = Propietario.objects.get(despacho=comunidad.despacho, nombre=nombre)
+            Mandato.objects.get_or_create(
+                comunidad=comunidad,
+                referencia=f"DEMO-{comunidad.pk}-{n:03d}",
+                defaults={
+                    "propietario": propietario,
+                    "titular_cuenta": nombre,
+                    "iban": construir_iban("ES", f"99990000{n:012d}"),
+                    "fecha_firma": date(2025, 6, 1),
+                },
+            )
+        generar_recibos(comunidad)  # solo crea los que falten

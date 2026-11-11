@@ -6,6 +6,7 @@ from django.core.validators import MaxValueValidator
 from django.db import models
 from django.db.models import Q, Sum
 
+from cobros.sepa.identificadores import IbanInvalido, identificador_acreedor, validar_iban
 from core.models import Despacho
 
 from .servicios import (
@@ -21,6 +22,15 @@ def validar_mayor_que_cero(valor: Decimal) -> None:
         raise ValidationError("Debe ser mayor que 0.", code="no_positivo")
 
 
+def validar_campo_iban(valor: str) -> None:
+    """Validador de formularios: IBAN con dígitos de control correctos."""
+    if valor:
+        try:
+            validar_iban(valor)
+        except IbanInvalido as error:
+            raise ValidationError(str(error), code="iban_invalido") from error
+
+
 class Comunidad(models.Model):
     """Comunidad de propietarios. Pertenece a un despacho (ver ADR 002)."""
 
@@ -28,6 +38,12 @@ class Comunidad(models.Model):
     nombre = models.CharField(max_length=200)
     nif = models.CharField("NIF", max_length=9, blank=True)
     direccion = models.CharField("dirección", max_length=300, blank=True)
+    # T2.4 — Cobros SEPA. Cuenta en la que la comunidad recibe los adeudos domiciliados.
+    iban_cobros = models.CharField(
+        "IBAN de cobro", max_length=34, blank=True, validators=[validar_campo_iban]
+    )
+    # Parte del identificador de acreedor SEPA (AT-02); "000" salvo que el banco diga otra cosa.
+    sufijo_acreedor = models.CharField("sufijo de acreedor SEPA", max_length=3, default="000")
 
     class Meta:
         verbose_name = "comunidad"
@@ -36,6 +52,16 @@ class Comunidad(models.Model):
 
     def __str__(self) -> str:
         return self.nombre
+
+    def save(self, *args, **kwargs):
+        self.iban_cobros = "".join(self.iban_cobros.split()).upper()
+        super().save(*args, **kwargs)
+
+    def identificador_acreedor(self) -> str:
+        """Identificador de acreedor SEPA (AT-02), calculado a partir del NIF. Sin NIF: ""."""
+        if not self.nif:
+            return ""
+        return identificador_acreedor(self.nif, sufijo=self.sufijo_acreedor)
 
     def suma_coeficientes(self) -> Decimal:
         return self.inmuebles.aggregate(suma=Sum("coeficiente"))["suma"] or Decimal("0")
