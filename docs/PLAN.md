@@ -57,6 +57,9 @@ tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizad
   `/comunidades/<id>/presupuestos/` con partidas, totales, estado del fondo y previsión.
   `cargar_demo` añade presupuestos y un fondo insuficiente. ADR 004.
 - ⬜ **T2.2** 🔀 Emisión de cuotas ordinarias por periodo (usa T1.3), con asientos contables.
+  Parte del presupuesto aprobado de T2.1 (`Presupuesto.total()`: gastos + aportación al
+  fondo). Debe negarse si el presupuesto no está aprobado o si R-COEF-01 no se cumple, e
+  impedir quitar la aprobación cuando ya haya cuotas emitidas.
 - ⬜ **T2.3** 🔀 Derramas (importe total, plazos, grupo de reparto).
 - ⬜ **T2.4** Recibos y mandatos SEPA `R-SEPA-01`.
 - ⬜ **T2.5** Generación de remesa pain.008 `R-SEPA-02`, validada contra el esquema XSD.
@@ -84,8 +87,8 @@ tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizad
 - Contabilidad: el trigger de cuadre no impide añadir, más tarde, un par de apuntes que
   cuadren a un asiento ya existente (los apuntes nuevos sí deben ir con `registrar_asiento`).
 - Contabilidad: falta un plan de cuentas por defecto al crear una comunidad (572, 430, 6xx,
-  7xx...) y el tipo de cuenta (activo, pasivo, gasto, ingreso) para informes. Probablemente
-  en T2.1/T2.2.
+  7xx...) y el tipo de cuenta (activo, pasivo, gasto, ingreso) para informes. T2.1 solo
+  añadió la marca `es_fondo_reserva`; el resto, probablemente en T2.2.
 - Contabilidad: no hay ejercicios ni cierre; no se impide registrar asientos con fecha pasada.
 - `config/urls.py` conserva el docstring en inglés generado por Django.
 - R-COEF-01 solo se exige al editar la comunidad en el admin. Cuando haya vistas o importación
