@@ -5,6 +5,7 @@
 {% block contenido %}
 <p class="migas"><a href="{% url 'fincas:lista_comunidades' %}">Comunidades</a> › {{ comunidad.nombre }}</p>
 <h1>Presupuestos de {{ comunidad.nombre }}</h1>
+<p><a href="{% url 'cobros:derramas_comunidad' comunidad.pk %}">Ver las derramas</a></p>
 
 {# R-RES-01: fondo de reserva ≥ 10 % del último presupuesto ordinario aprobado. #}
 <section class="tarjeta">

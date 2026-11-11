@@ -1,6 +1,8 @@
-from django.contrib import admin
+from django.contrib import admin, messages
+from django.utils import timezone
 
-from .models import Partida, Presupuesto
+from .derramas import DerramaInvalida, emitir_derrama
+from .models import CuotaDerrama, Derrama, Partida, Presupuesto
 from .servicios import total_partidas
 
 # Nota (ADR 002): el admin de Django NO filtra por despacho. Es solo para el superusuario.
@@ -83,3 +85,67 @@ class PresupuestoAdmin(admin.ModelAdmin):
     @admin.display(description="total a cobrar")
     def total(self, presupuesto):
         return self._gastos(presupuesto) + presupuesto.aportacion_fondo_reserva
+
+
+class CuotaDerramaInline(admin.TabularInline):
+    """Cuotas de una derrama emitida: solo se ven (son inmutables)."""
+
+    model = CuotaDerrama
+    fields = ["plazo", "vencimiento", "inmueble", "importe"]
+    readonly_fields = fields
+    extra = 0
+    can_delete = False
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(Derrama)
+class DerramaAdmin(admin.ModelAdmin):
+    list_display = [
+        "concepto",
+        "comunidad",
+        "importe",
+        "grupo",
+        "plazos",
+        "primer_vencimiento",
+        "fecha_acuerdo",
+        "emitida",
+    ]
+    list_filter = ["comunidad__despacho", "comunidad"]
+    search_fields = ["concepto", "comunidad__nombre"]
+    inlines = [CuotaDerramaInline]
+    actions = ["emitir"]
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj is not None and obj.esta_emitida:
+            return [f.name for f in Derrama._meta.fields if f.editable and f.name != "id"]
+        return []
+
+    def has_delete_permission(self, request, obj=None):
+        emitida = obj is not None and obj.esta_emitida
+        return not emitida and super().has_delete_permission(request, obj)
+
+    def get_actions(self, request):
+        # "Borrar seleccionados" no pasa por has_delete_permission(obj): fuera.
+        acciones = super().get_actions(request)
+        acciones.pop("delete_selected", None)
+        return acciones
+
+    @admin.display(description="emitida", boolean=True)
+    def emitida(self, derrama):
+        return derrama.esta_emitida
+
+    @admin.action(description="Emitir las derramas seleccionadas (asiento y cuotas)")
+    def emitir(self, request, queryset):
+        hoy = timezone.localdate()
+        for derrama in queryset:
+            try:
+                emitir_derrama(derrama, hoy)
+            except DerramaInvalida as error:
+                self.message_user(request, f"{derrama}: {error}", messages.ERROR)
+            else:
+                self.message_user(request, f"{derrama}: emitida.", messages.SUCCESS)

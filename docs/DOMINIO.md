@@ -17,6 +17,15 @@ Ninguna regla está validada todavía. Antes de cualquier uso real, revisar toda
   los céntimos sobrantes se asignan uno a uno a los inmuebles con mayor parte decimal descartada
   (método del resto mayor). Empates: por orden de identificador. La suma siempre cuadra.
 
+Interpretación aplicada en T2.3 (pendiente de validar con un profesional):
+- Un grupo de reparto usa los coeficientes generales de sus inmuebles (en proporción a lo que
+  sumen entre ellos) o unos propios, que entonces se fijan para todos sus inmuebles.
+- Una derrama se reparte por coeficiente entre todos los inmuebles o entre los de un grupo, y
+  cada parte se divide en plazos iguales (R-REP-02 en los dos pasos).
+- Preguntas: ¿qué mayoría hace falta para acordar una derrama, y debe constar el acuerdo antes
+  de emitirla? ¿Puede repartirse de otra forma (p. ej. a partes iguales, sin coeficiente)?
+  ¿Quién paga los plazos que vencen después de vender el inmueble?
+
 ## Presupuesto y fondo de reserva
 - **R-RES-01** ⚠️ La comunidad debe tener un fondo de reserva no inferior al 10 % de su último
   presupuesto ordinario (art. 9.1.f LPH).

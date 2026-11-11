@@ -8,7 +8,12 @@ from django.db.models import Q, Sum
 
 from core.models import Despacho
 
-from .servicios import SUMA_COEFICIENTES, CoeficientesInvalidos, comprobar_coeficientes
+from .servicios import (
+    SUMA_COEFICIENTES,
+    CoeficientesInvalidos,
+    coeficientes_de_grupo,
+    comprobar_coeficientes,
+)
 
 
 def validar_mayor_que_cero(valor: Decimal) -> None:
@@ -184,6 +189,84 @@ class Titularidad(models.Model):
             )
 
 
+class GrupoReparto(models.Model):
+    """R-REP-01: conjunto de inmuebles que comparten ciertos gastos (p. ej. "Ascensor", sin
+    los locales), con los coeficientes generales de sus inmuebles o con unos propios.
+
+    Lo usan las derramas (T2.3) para repartir solo entre esos inmuebles.
+    """
+
+    comunidad = models.ForeignKey(
+        Comunidad, on_delete=models.PROTECT, related_name="grupos_reparto"
+    )
+    nombre = models.CharField(max_length=100)
+
+    class Meta:
+        verbose_name = "grupo de reparto"
+        verbose_name_plural = "grupos de reparto"
+        ordering = ["comunidad", "nombre"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["comunidad", "nombre"], name="grupo_reparto_nombre_unico_en_comunidad"
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.comunidad} · {self.nombre}"
+
+    def coeficientes(self) -> dict[int, Decimal]:
+        """R-REP-01: {id del inmueble: coeficiente con el que reparte este grupo}.
+
+        Lanza `fincas.servicios.GrupoInvalido` si el grupo no sirve para repartir.
+        """
+        return coeficientes_de_grupo(
+            (miembro.inmueble_id, miembro.inmueble.coeficiente, miembro.coeficiente)
+            for miembro in self.miembros.select_related("inmueble")
+        )
+
+
+class MiembroGrupo(models.Model):
+    """Un inmueble dentro de un grupo de reparto."""
+
+    grupo = models.ForeignKey(GrupoReparto, on_delete=models.CASCADE, related_name="miembros")
+    inmueble = models.ForeignKey(Inmueble, on_delete=models.PROTECT, related_name="grupos_reparto")
+    # R-REP-01: vacío = se usa el coeficiente general del inmueble. Si se rellena, debe
+    # rellenarse en todos los inmuebles del grupo (ver `coeficientes_de_grupo`).
+    coeficiente = models.DecimalField(
+        "coeficiente propio (%)",
+        max_digits=7,
+        decimal_places=4,
+        null=True,
+        blank=True,
+        validators=[validar_mayor_que_cero, MaxValueValidator(SUMA_COEFICIENTES)],
+        help_text="Vacío: el coeficiente general del inmueble.",
+    )
+
+    class Meta:
+        verbose_name = "inmueble del grupo"
+        verbose_name_plural = "inmuebles del grupo"
+        ordering = ["grupo", "inmueble__referencia"]
+        constraints = [
+            models.UniqueConstraint(fields=["grupo", "inmueble"], name="miembro_grupo_unico"),
+            models.CheckConstraint(
+                condition=Q(coeficiente__isnull=True) | Q(coeficiente__gt=0),
+                name="miembro_grupo_coeficiente_positivo",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.grupo.nombre} · {self.inmueble.referencia}"
+
+    def clean(self) -> None:
+        # En el admin, al crear un grupo junto con sus inmuebles, el grupo ya está asignado
+        # pero aún no tiene id: por eso se mira también si está en memoria.
+        tiene_grupo = self.grupo_id is not None or MiembroGrupo.grupo.is_cached(self)
+        if not tiene_grupo or self.inmueble_id is None:
+            return  # los errores de campos obligatorios ya los da Django
+        if self.inmueble.comunidad_id != self.grupo.comunidad_id:
+            raise ValidationError({"inmueble": "El inmueble es de otra comunidad que el grupo."})
+
+
 # Camino desde cada modelo hasta su despacho, para `core.aislamiento.filtrar_por_despacho`
 # y `FiltradoPorDespachoMixin.campo_despacho`.
 CAMPO_DESPACHO = {
@@ -191,4 +274,6 @@ CAMPO_DESPACHO = {
     Inmueble: "comunidad__despacho",
     Propietario: "despacho",
     Titularidad: "inmueble__comunidad__despacho",
+    GrupoReparto: "comunidad__despacho",
+    MiembroGrupo: "grupo__comunidad__despacho",
 }

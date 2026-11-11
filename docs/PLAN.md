@@ -60,7 +60,15 @@ tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizad
   Parte del presupuesto aprobado de T2.1 (`Presupuesto.total()`: gastos + aportación al
   fondo). Debe negarse si el presupuesto no está aprobado o si R-COEF-01 no se cumple, e
   impedir quitar la aprobación cuando ya haya cuotas emitidas.
-- ⬜ **T2.3** 🔀 Derramas (importe total, plazos, grupo de reparto).
+- ✅ **T2.3** 🔀 Derramas (importe total, plazos, grupo de reparto).
+  Hecho: grupos de reparto R-REP-01 en `fincas` (`GrupoReparto`, `MiembroGrupo` con
+  coeficiente propio opcional, todos o ninguno: `servicios.coeficientes_de_grupo`).
+  `cobros.Derrama` (importe, plazos, vencimientos, grupo, fecha de acuerdo) y
+  `CuotaDerrama` (inmueble × plazo, inmutable). `cobros.derramas.emitir_derrama` exige
+  acuerdo y R-COEF-01, fija las cuotas y registra un asiento (430 por inmueble / 706). Cálculo
+  puro `servicios.plan_de_derrama` (R-REP-02 en dos pasos, hypothesis) y `vencimientos`.
+  Página `/comunidades/<id>/derramas/` (reparto previsto o emitido), admin con acción
+  "Emitir", `cargar_demo` con un grupo y dos derramas. ADR 006.
 - ⬜ **T2.4** Recibos y mandatos SEPA `R-SEPA-01`.
 - ⬜ **T2.5** Generación de remesa pain.008 `R-SEPA-02`, validada contra el esquema XSD.
 
@@ -104,6 +112,16 @@ tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizad
   propia de alta/edición para el administrador de fincas.
 - Presupuestos aprobados: la protección es solo en Python (`QuerySet.update()` de partidas la
   esquiva). T2.2 debe impedir quitar la aprobación si ya hay cuotas emitidas.
-- Partidas sin grupo de reparto (R-REP-01) ni cuenta de gasto asociada: probablemente T2.3.
+- Partidas sin grupo de reparto (R-REP-01) ni cuenta de gasto asociada. Los grupos ya existen
+  (T2.3); falta que una partida pueda repartirse solo entre un grupo en las cuotas ordinarias.
+- Al fusionar T2.2 y T2.3: las dos crean `cobros/migrations/0002_*` (renumerar la de derramas
+  a 0003, dependiendo de `0002_emision_cuotas`); `plan_de_derrama` = `plan_de_cuotas`
+  (unificar); `_cuenta()` y las cuentas 430 están duplicadas en `cobros/emision.py` y
+  `cobros/derramas.py` (llevar a `contabilidad`); `tests/cobros/conftest.py` puede chocar.
+- Derramas: no se pueden anular una vez emitidas (faltan contra-asiento y anular cuotas). Se
+  crean y emiten solo en el admin (sin filtro por despacho); la acción "Emitir" fecha el
+  asiento con el día de hoy.
+- Admin de grupos de reparto: el buscador de inmuebles ofrece los de todas las comunidades
+  (el modelo rechaza los de otra comunidad al guardar).
 - El saldo del fondo de reserva cuenta todos los apuntes, también los de fecha futura.
 - Pregunta pendiente para `DOMINIO.md`: base del 10 % de R-RES-01 (ver nota bajo R-PRE-01).

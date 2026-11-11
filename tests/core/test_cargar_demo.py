@@ -9,11 +9,18 @@ from django.core.management import CommandError, call_command
 from django.urls import reverse
 
 from cobros.consultas import fondo_reserva_de
-from cobros.models import Partida, Presupuesto
+from cobros.models import CuotaDerrama, Derrama, Partida, Presupuesto
 from contabilidad.models import Apunte, Asiento, Cuenta
 from core.management.commands.cargar_demo import CLAVE_DEMO
 from core.models import Despacho, Usuario
-from fincas.models import Comunidad, Inmueble, Propietario, Titularidad
+from fincas.models import (
+    Comunidad,
+    GrupoReparto,
+    Inmueble,
+    MiembroGrupo,
+    Propietario,
+    Titularidad,
+)
 
 MODELOS = [
     Despacho,
@@ -28,6 +35,10 @@ MODELOS = [
     Apunte,
     Presupuesto,
     Partida,
+    GrupoReparto,
+    MiembroGrupo,
+    Derrama,
+    CuotaDerrama,
 ]
 
 
@@ -169,3 +180,15 @@ def test_r_res_01_la_demo_muestra_un_fondo_de_reserva_insuficiente(demo):
     assert fondo.saldo == Decimal("350.00")
     assert fondo.estado.minimo == Decimal("491.00")
     assert not fondo.estado.cumple
+
+
+@pytest.mark.django_db
+def test_crea_un_grupo_de_reparto_y_derramas(demo):
+    """T2.3 / R-REP-01: una derrama emitida entre todos y otra propuesta solo para un grupo."""
+    grupo = GrupoReparto.objects.get(nombre="Ascensor")
+    assert grupo.miembros.count() == 4
+    emitida = Derrama.objects.get(concepto="Arreglo de la fachada")
+    assert emitida.esta_emitida
+    assert sum(emitida.cuotas.values_list("importe", flat=True)) == emitida.importe
+    propuesta = Derrama.objects.get(grupo=grupo)
+    assert not propuesta.esta_acordada and not propuesta.esta_emitida

@@ -7,7 +7,14 @@ from core.aislamiento import FiltradoPorDespachoMixin
 from fincas.models import CAMPO_DESPACHO, Comunidad
 
 from .consultas import fondo_reserva_de
-from .models import Presupuesto
+from .derramas import (
+    DerramaInvalida,
+    FilaReparto,
+    filas_de_reparto,
+    reparto_emitido,
+    reparto_previsto,
+)
+from .models import Derrama, Presupuesto
 from .servicios import EstadoFondoReserva, estado_fondo_reserva, total_partidas
 
 
@@ -51,3 +58,40 @@ class PresupuestosComunidad(FiltradoPorDespachoMixin, DetailView):
                 )
             )
         return super().get_context_data(fondo=fondo, filas=filas, **kwargs)
+
+
+@dataclass(frozen=True)
+class FichaDerrama:
+    derrama: Derrama
+    vencimientos: list
+    filas: list[FilaReparto]  # vacía si no se puede repartir (ver `error`)
+    error: str  # por qué no se puede repartir todavía (R-COEF-01, R-REP-01...)
+
+
+class DerramasComunidad(FiltradoPorDespachoMixin, DetailView):
+    """Derramas de una comunidad del despacho con su reparto por inmueble y plazo: el
+    emitido (fijo) o, si aún no se ha emitido, el que saldría ahora. Una comunidad de otro
+    despacho da 404 (FiltradoPorDespachoMixin)."""
+
+    model = Comunidad
+    campo_despacho = CAMPO_DESPACHO[Comunidad]
+    context_object_name = "comunidad"
+    template_name = "cobros/derramas_comunidad.html"
+
+    def get_context_data(self, **kwargs):
+        fichas = []
+        for derrama in self.object.derramas.select_related("grupo", "comunidad", "asiento"):
+            filas, error = [], ""
+            try:
+                plan = (
+                    reparto_emitido(derrama) if derrama.esta_emitida else reparto_previsto(derrama)
+                )
+                filas = filas_de_reparto(plan)
+            except DerramaInvalida as motivo:
+                error = str(motivo)
+            fichas.append(
+                FichaDerrama(
+                    derrama=derrama, vencimientos=derrama.vencimientos(), filas=filas, error=error
+                )
+            )
+        return super().get_context_data(fichas=fichas, **kwargs)

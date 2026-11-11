@@ -82,3 +82,43 @@ def repartir[K: Hashable](importe: Decimal, coeficientes: Mapping[K, Decimal]) -
         partes[clave] += 1
 
     return {clave: (Decimal(signo * cent) * CENTIMO) for clave, cent in partes.items()}
+
+
+# --- Grupos de reparto (R-REP-01, T2.3) ------------------------------------------------
+
+
+class GrupoInvalido(ValueError):
+    """Un grupo de reparto no se puede usar para repartir (R-REP-01)."""
+
+
+def coeficientes_de_grupo[K: Hashable](
+    miembros: Iterable[tuple[K, Decimal, Decimal | None]],
+) -> dict[K, Decimal]:
+    """R-REP-01: coeficientes con los que reparte un grupo de reparto.
+
+    `miembros` son tuplas (clave del inmueble, coeficiente general, coeficiente propio en el
+    grupo o None). Hay dos formas de definir un grupo, y no se pueden mezclar:
+      - Sin coeficientes propios: se usan los generales de sus inmuebles. Es el caso típico
+        de excluir inmuebles de un gasto (p. ej. los locales del ascensor); `repartir` ya
+        reparte en proporción a lo que sumen, aunque no lleguen a 100.
+      - Con coeficientes propios en TODOS: los que fijen los estatutos o el acuerdo.
+    """
+    miembros = list(miembros)
+    for _, general, propio in miembros:
+        for valor in (general, propio):
+            if valor is not None and not isinstance(valor, Decimal):
+                raise TypeError(f"Los coeficientes deben ser Decimal, no {type(valor).__name__}")
+    if not miembros:
+        raise GrupoInvalido("R-REP-01: el grupo de reparto no tiene ningún inmueble.")
+    con_propio = [propio is not None for _, _, propio in miembros]
+    if any(con_propio) and not all(con_propio):
+        raise GrupoInvalido(
+            "R-REP-01: los coeficientes propios del grupo deben ponerse en todos o ninguno "
+            "de sus inmuebles."
+        )
+    coeficientes = {
+        clave: (propio if propio is not None else general) for clave, general, propio in miembros
+    }
+    if any(coeficiente <= 0 for coeficiente in coeficientes.values()):
+        raise GrupoInvalido("R-REP-01: cada coeficiente del grupo debe ser mayor que 0.")
+    return coeficientes

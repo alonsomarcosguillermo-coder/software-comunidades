@@ -5,8 +5,14 @@ from django.core.exceptions import ValidationError
 from django.db.models import Count, Sum
 from django.forms.models import BaseInlineFormSet
 
-from .models import Comunidad, Inmueble, Propietario, Titularidad
-from .servicios import SUMA_COEFICIENTES, CoeficientesInvalidos, comprobar_coeficientes
+from .models import Comunidad, GrupoReparto, Inmueble, MiembroGrupo, Propietario, Titularidad
+from .servicios import (
+    SUMA_COEFICIENTES,
+    CoeficientesInvalidos,
+    GrupoInvalido,
+    coeficientes_de_grupo,
+    comprobar_coeficientes,
+)
 
 # Nota (ADR 002): el admin de Django NO filtra por despacho. Es solo para el superusuario.
 
@@ -97,3 +103,51 @@ class PropietarioAdmin(admin.ModelAdmin):
     list_filter = ["despacho"]
     search_fields = ["nombre", "nif", "email"]
     inlines = [TitularidadInline]
+
+
+class MiembrosFormSet(BaseInlineFormSet):
+    """R-REP-01: los coeficientes propios del grupo, en todos sus inmuebles o en ninguno.
+    Se comprueba sobre el conjunto del formulario, como R-COEF-01 en la comunidad."""
+
+    def clean(self):
+        super().clean()
+        if any(self.errors):
+            return
+        miembros = [
+            (
+                form.cleaned_data["inmueble"].pk,
+                form.cleaned_data["inmueble"].coeficiente,
+                form.cleaned_data.get("coeficiente"),
+            )
+            for form in self.forms
+            if form.cleaned_data and not form.cleaned_data.get("DELETE")
+        ]
+        if not miembros:
+            return  # se puede crear el grupo y añadir los inmuebles después
+        try:
+            coeficientes_de_grupo(miembros)
+        except GrupoInvalido as error:
+            raise ValidationError(str(error)) from error
+
+
+class MiembroGrupoInline(admin.TabularInline):
+    model = MiembroGrupo
+    formset = MiembrosFormSet
+    extra = 0
+    fields = ["inmueble", "coeficiente"]
+    autocomplete_fields = ["inmueble"]
+
+
+@admin.register(GrupoReparto)
+class GrupoRepartoAdmin(admin.ModelAdmin):
+    list_display = ["nombre", "comunidad", "num_inmuebles"]
+    list_filter = ["comunidad__despacho", "comunidad"]
+    search_fields = ["nombre", "comunidad__nombre"]
+    inlines = [MiembroGrupoInline]
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).annotate(_num=Count("miembros"))
+
+    @admin.display(description="inmuebles", ordering="_num")
+    def num_inmuebles(self, grupo):
+        return grupo._num

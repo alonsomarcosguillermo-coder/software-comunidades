@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block titulo %}Derramas · {{ comunidad.nombre }}{% endblock %}
+
+{% block contenido %}
+<p class="migas"><a href="{% url 'fincas:lista_comunidades' %}">Comunidades</a> ›
+  <a href="{% url 'cobros:presupuestos_comunidad' comunidad.pk %}">{{ comunidad.nombre }}</a> › Derramas</p>
+<h1>Derramas de {{ comunidad.nombre }}</h1>
+
+{% for ficha in fichas %}
+  {% with derrama=ficha.derrama %}
+  <section class="tarjeta">
+    <div class="titulo-seccion">
+      <h2>{{ derrama.concepto }}</h2>
+      {% if derrama.esta_emitida %}
+        <span class="estado ok">Emitida (asiento {{ derrama.asiento.numero }})</span>
+      {% elif derrama.esta_acordada %}
+        <span class="estado">Acordada el {{ derrama.fecha_acuerdo|date:"j/n/Y" }}, sin emitir</span>
+      {% else %}
+        <span class="estado">Propuesta, sin acordar</span>
+      {% endif %}
+    </div>
+    <dl class="datos">
+      <dt>Importe total</dt><dd class="num">{{ derrama.importe }} €</dd>
+      {# R-REP-01: sin grupo, todos los inmuebles por su coeficiente general. #}
+      <dt>Reparto</dt>
+      <dd>{% if derrama.grupo %}Grupo «{{ derrama.grupo.nombre }}»{% else %}Todos los inmuebles{% endif %}</dd>
+      <dt>Plazos</dt><dd class="num">{{ derrama.plazos }}</dd>
+    </dl>
+
+    {% if ficha.error %}
+      <p><span class="estado mal">No se puede repartir</span> {{ ficha.error }}</p>
+    {% else %}
+      {% if not derrama.esta_emitida %}
+        <p class="vacio">Reparto previsto: puede cambiar hasta que se emita la derrama.</p>
+      {% endif %}
+      <table class="tabla">
+        <thead>
+          <tr>
+            <th>Inmueble</th>
+            {% for vencimiento in ficha.vencimientos %}
+              <th class="num">Plazo {{ forloop.counter }}<br><small>{{ vencimiento|date:"j/n/Y" }}</small></th>
+            {% endfor %}
+            <th class="num">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for fila in ficha.filas %}
+            <tr>
+              <td>{{ fila.inmueble.referencia }}</td>
+              {% for cuota in fila.cuotas %}<td class="num">{{ cuota }} €</td>{% endfor %}
+              <td class="num">{{ fila.total }} €</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr><th colspan="{{ derrama.plazos|add:1 }}">Total</th><th class="num">{{ derrama.importe }} €</th></tr>
+        </tfoot>
+      </table>
+    {% endif %}
+  </section>
+  {% endwith %}
+{% empty %}
+  <p class="vacio">Esta comunidad no tiene derramas.</p>
+{% endfor %}
+{% endblock %}

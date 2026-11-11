@@ -16,12 +16,20 @@ from django.contrib.auth.models import Group, Permission
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
-from cobros.models import Partida, Presupuesto
+from cobros.derramas import emitir_derrama
+from cobros.models import Derrama, Partida, Presupuesto
 from contabilidad.models import Cuenta
 from contabilidad.registro import anular_asiento, registrar_asiento
 from contabilidad.servicios import Linea
 from core.models import Despacho, Usuario
-from fincas.models import Comunidad, Inmueble, Propietario, Titularidad
+from fincas.models import (
+    Comunidad,
+    GrupoReparto,
+    Inmueble,
+    MiembroGrupo,
+    Propietario,
+    Titularidad,
+)
 from fincas.servicios import comprobar_coeficientes
 
 CLAVE_DEMO = "demo-comunidades-2026"
@@ -47,6 +55,10 @@ GRUPOS = {
         "contabilidad.view_apunte",
         *_todos("cobros", "presupuesto"),
         *_todos("cobros", "partida"),
+        *_todos("fincas", "gruporeparto"),
+        *_todos("fincas", "miembrogrupo"),
+        *_todos("cobros", "derrama"),
+        "cobros.view_cuotaderrama",
     ],
     "Empleado del despacho": [
         "fincas.view_comunidad",
@@ -62,6 +74,10 @@ GRUPOS = {
         "contabilidad.view_apunte",
         "cobros.view_presupuesto",
         "cobros.view_partida",
+        "fincas.view_gruporeparto",
+        "fincas.view_miembrogrupo",
+        "cobros.view_derrama",
+        "cobros.view_cuotaderrama",
     ],
     "Vecino": [],  # el portal del vecino llega en la Fase 5
 }
@@ -146,6 +162,37 @@ PRESUPUESTOS = {
     ],
 }
 
+# R-REP-01: comunidad -> {grupo de reparto: [referencias]} (con sus coeficientes generales).
+GRUPOS_REPARTO = {
+    "CP Calle Ficticia 1": {"Ascensor": ["1A", "1B", "2A", "2B"]},  # sin local ni garaje
+}
+
+# comunidad -> [(concepto, importe, grupo o None, plazos, primer vencimiento,
+#                fecha de acuerdo o None, fecha de emisión o None)]
+DERRAMAS = {
+    "CP Calle Ficticia 1": [
+        (
+            "Arreglo de la fachada",
+            "6000.00",
+            None,
+            3,
+            date(2026, 4, 1),
+            date(2026, 2, 20),
+            date(2026, 3, 1),
+        ),
+        # Propuesta para la próxima junta: solo la pagarían los pisos (grupo "Ascensor").
+        (
+            "Cambio de la cabina del ascensor",
+            "4800.00",
+            "Ascensor",
+            6,
+            date(2026, 9, 1),
+            None,
+            None,
+        ),
+    ],
+}
+
 
 def _email(texto: str) -> str:
     """Email ficticio en example.com (dominio reservado para ejemplos)."""
@@ -171,6 +218,7 @@ class Command(BaseCommand):
             self._fincas(despachos)
             self._contabilidad()
             self._presupuestos()
+            self._derramas()
 
         self.stdout.write(self.style.SUCCESS("Datos de demo cargados."))
         self.stdout.write(f"Usuarios (clave «{CLAVE_DEMO}» si se acaban de crear):")
@@ -305,3 +353,32 @@ class Command(BaseCommand):
                 if aprobado_el:
                     presupuesto.fecha_aprobacion = aprobado_el
                     presupuesto.save()
+
+    def _derramas(self):
+        for nombre, grupos in GRUPOS_REPARTO.items():
+            comunidad = Comunidad.objects.get(nombre=nombre)
+            for nombre_grupo, referencias in grupos.items():
+                grupo, _ = GrupoReparto.objects.get_or_create(
+                    comunidad=comunidad, nombre=nombre_grupo
+                )
+                for referencia in referencias:
+                    MiembroGrupo.objects.get_or_create(
+                        grupo=grupo, inmueble=comunidad.inmuebles.get(referencia=referencia)
+                    )
+        for nombre, derramas in DERRAMAS.items():
+            comunidad = Comunidad.objects.get(nombre=nombre)
+            for concepto, importe, grupo, plazos, vence, acordada, emitir_el in derramas:
+                derrama, creada = Derrama.objects.get_or_create(
+                    comunidad=comunidad,
+                    concepto=concepto,
+                    defaults={
+                        "importe": Decimal(importe),
+                        "grupo": grupo and comunidad.grupos_reparto.get(nombre=grupo),
+                        "plazos": plazos,
+                        "primer_vencimiento": vence,
+                        "fecha_acuerdo": acordada,
+                    },
+                )
+                # Si ya existía, no se toca (quizá ya está emitida y es inmutable).
+                if creada and emitir_el:
+                    emitir_derrama(derrama, emitir_el)
