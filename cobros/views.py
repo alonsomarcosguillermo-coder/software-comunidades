@@ -194,10 +194,13 @@ class RecibosComunidad(FiltradoPorDespachoMixin, DetailView):
         mandatos = list(comunidad.mandatos.select_related("propietario"))
         # R-SEPA-01: el mandato vigente hoy de cada propietario (como mucho uno sin baja).
         vigentes = {m.propietario_id: m for m in mandatos if m.vigente_en(hoy)}
-        # "cobro" (T3.2) viene de la app bancos; select_related evita una consulta por recibo.
-        recibos = comunidad.recibos.select_related(
-            "inmueble", "propietario", "remesa", "cobro"
-        ).order_by("-numero")
+        # "cobro" (T3.2) y "devoluciones" (T3.3) vienen de la app bancos; select_related y
+        # prefetch_related evitan una consulta por recibo.
+        recibos = (
+            comunidad.recibos.select_related("inmueble", "propietario", "remesa", "cobro")
+            .prefetch_related("devoluciones")
+            .order_by("-numero")
+        )
         filas = [(recibo, vigentes.get(recibo.propietario_id)) for recibo in recibos]
         return super().get_context_data(
             filas=filas,

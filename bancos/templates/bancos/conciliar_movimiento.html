@@ -24,15 +24,22 @@
   </dl>
 </section>
 
-{% if movimiento.es_abono %}
+{# Abono: recibos pendientes que paga. Cargo (T3.3): recibos cobrados que el banco devuelve. #}
   <section class="tarjeta">
-    <h2>Recibos que paga</h2>
-    <p class="vacio">Marca los recibos que paga este abono. Su suma tiene que ser exactamente
-      {{ movimiento.importe }} €. Arriba, los que coinciden con el importe.</p>
+    {% if movimiento.es_abono %}
+      <h2>Recibos que paga</h2>
+      <p class="vacio">Marca los recibos que paga este abono. Su suma tiene que ser exactamente
+        {{ importe }} €. Arriba, los que coinciden con el importe.</p>
+    {% else %}
+      <h2>Recibos devueltos</h2>
+      <p class="vacio">Si este cargo es la devolución de recibos domiciliados, marca cuáles.
+        Su suma tiene que ser exactamente {{ importe }} €. Volverán a ser deuda del
+        propietario. Arriba, los que coinciden con el importe.</p>
+    {% endif %}
     {% if recibos %}
       <form method="post">
         {% csrf_token %}
-        <input type="hidden" name="accion" value="recibos">
+        <input type="hidden" name="accion" value="{% if movimiento.es_abono %}recibos{% else %}devolucion{% endif %}">
         <table class="tabla">
           <thead><tr><th></th><th>Recibo</th><th>Concepto</th><th>Pagador</th><th>Vence</th>
             <th class="num">Importe</th></tr></thead>
@@ -45,19 +52,20 @@
                 <td>{{ recibo.propietario.nombre }}</td>
                 <td>{{ recibo.vencimiento|date:"j/n/Y" }}</td>
                 <td class="num">
-                  {% if recibo.importe == movimiento.importe %}<span class="estado ok">{{ recibo.importe }} €</span>{% else %}{{ recibo.importe }} €{% endif %}
+                  {% if recibo.importe == importe %}<span class="estado ok">{{ recibo.importe }} €</span>{% else %}{{ recibo.importe }} €{% endif %}
                 </td>
               </tr>
             {% endfor %}
           </tbody>
         </table>
-        <p><button type="submit">Conciliar con los recibos marcados</button></p>
+        <p><button type="submit">{% if movimiento.es_abono %}Conciliar con los recibos marcados{% else %}Registrar la devolución de los recibos marcados{% endif %}</button></p>
       </form>
-    {% else %}
+    {% elif movimiento.es_abono %}
       <p class="vacio">No hay recibos pendientes de cobro en esta comunidad.</p>
+    {% else %}
+      <p class="vacio">No hay recibos cobrados que se puedan devolver.</p>
     {% endif %}
   </section>
-{% endif %}
 
 <section class="tarjeta">
   <h2>Otra cuenta contable</h2>

@@ -572,10 +572,19 @@ class Recibo(models.Model):
         return hasattr(self, "cobro")
 
     @property
+    def esta_devuelto(self) -> bool:
+        """T3.3: sin cobrar ahora, pero el banco ya devolvió algún cobro suyo
+        (`bancos.Devolucion`, related_name "devoluciones"). Es deuda del propietario."""
+        devoluciones = getattr(self, "devoluciones", None)
+        # .all() (y no .exists()) aprovecha prefetch_related si la vista lo ha usado.
+        return not self.esta_cobrado and devoluciones is not None and bool(devoluciones.all())
+
+    @property
     def estado(self) -> str:
-        # Devuelto llegará con T3.3.
         if self.esta_cobrado:
             return "cobrado"
+        if self.esta_devuelto:
+            return "devuelto"
         return "remesado" if self.remesa_id else "pendiente"
 
 

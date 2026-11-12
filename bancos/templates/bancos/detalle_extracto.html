@@ -44,6 +44,7 @@
                 {% if conciliacion %}
                   {% if conciliacion.remesa %}Remesa {{ conciliacion.remesa.numero }}:{% endif %}
                   {% for cobro in conciliacion.cobros.all %}{{ cobro.recibo.referencia }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                  {% for devolucion in conciliacion.devoluciones.all %}{% if forloop.first %}Devolución de {% endif %}{{ devolucion.recibo.referencia }}{% if not forloop.last %}, {% endif %}{% endfor %}
                   {% if conciliacion.cuenta %}{{ conciliacion.cuenta.codigo }} {{ conciliacion.cuenta.nombre }}{% endif %}
                   <br><span class="vacio">Asiento {{ conciliacion.asiento.numero }}{% if conciliacion.automatica %} · automática{% endif %}</span>
                   {% if puede_deshacer %}

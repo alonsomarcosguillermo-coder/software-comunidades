@@ -155,8 +155,9 @@ class Conciliacion(models.Model):
 
 
 class CobroRecibo(models.Model):
-    """Un recibo pagado por un movimiento conciliado. Un recibo se cobra una sola vez
-    (restricción en la BD). Las devoluciones (T3.3) tendrán que revisar esta regla."""
+    """Un recibo pagado ahora mismo por un movimiento conciliado. Como mucho uno por recibo
+    (restricción en la BD). Si el banco lo devuelve (T3.3), esta fila se borra y queda una
+    `Devolucion`; el recibo se puede volver a cobrar con otro movimiento."""
 
     conciliacion = models.ForeignKey(Conciliacion, on_delete=models.CASCADE, related_name="cobros")
     recibo = models.OneToOneField(Recibo, on_delete=models.PROTECT, related_name="cobro")
@@ -169,10 +170,39 @@ class CobroRecibo(models.Model):
         return f"{self.recibo.referencia} cobrado"
 
 
+class Devolucion(models.Model):
+    """T3.3 — Un recibo cobrado que el banco ha devuelto (ADR 011).
+
+    La `conciliacion` es la del cargo de la devolución (asiento 430 / 572). Al crearla se
+    borra el `CobroRecibo` del recibo, así que vuelve a estar sin cobrar: es otra vez deuda
+    del propietario y se puede volver a cobrar. `cobro` guarda qué conciliación lo había
+    cobrado, para poder deshacer la devolución y restaurar el cobro.
+    """
+
+    conciliacion = models.ForeignKey(
+        Conciliacion, on_delete=models.CASCADE, related_name="devoluciones"
+    )
+    recibo = models.ForeignKey(Recibo, on_delete=models.PROTECT, related_name="devoluciones")
+    # PROTECT: no se puede deshacer el cobro mientras su devolución exista.
+    cobro = models.ForeignKey(Conciliacion, on_delete=models.PROTECT, related_name="+")
+
+    class Meta:
+        verbose_name = "devolución de recibo"
+        verbose_name_plural = "devoluciones de recibos"
+        constraints = [
+            # Un mismo cobro de un recibo solo se puede devolver una vez.
+            models.UniqueConstraint(fields=["recibo", "cobro"], name="devolucion_unica_por_cobro"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.recibo.referencia} devuelto"
+
+
 # Camino desde cada modelo hasta su despacho (ver core.aislamiento y ADR 002).
 CAMPO_DESPACHO = {
     Extracto: "comunidad__despacho",
     Movimiento: "extracto__comunidad__despacho",
     Conciliacion: "movimiento__extracto__comunidad__despacho",
     CobroRecibo: "conciliacion__movimiento__extracto__comunidad__despacho",
+    Devolucion: "conciliacion__movimiento__extracto__comunidad__despacho",
 }

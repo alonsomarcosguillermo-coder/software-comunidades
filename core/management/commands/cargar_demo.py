@@ -81,6 +81,7 @@ GRUPOS = {
         "bancos.add_conciliacion",
         "bancos.delete_conciliacion",
         "bancos.view_cobrorecibo",
+        "bancos.view_devolucion",
     ],
     "Empleado del despacho": [
         "fincas.view_comunidad",
@@ -109,6 +110,7 @@ GRUPOS = {
         "bancos.view_movimiento",
         "bancos.view_conciliacion",
         "bancos.view_cobrorecibo",
+        "bancos.view_devolucion",
     ],
     "Vecino": [],  # el portal del vecino llega en la Fase 5
 }

@@ -4,10 +4,10 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 
-from bancos.conciliacion import conciliar_con_recibos
+from bancos.conciliacion import conciliar_con_recibos, conciliar_devolucion
 from bancos.importacion import importar_norma43
 
-from .conftest import abono, fichero, importar, recibo_de
+from .conftest import abono, cargo, fichero, importar, recibo_de
 
 pytestmark = pytest.mark.django_db
 
@@ -40,3 +40,17 @@ def test_conciliaciones_en_solo_lectura(client, superusuario, con_recibos):
     assert ficha.status_code == 200
     borrar = reverse("admin:bancos_conciliacion_delete", args=[conciliacion.pk])
     assert client.post(borrar, {"post": "yes"}).status_code == 403
+
+
+def test_ficha_de_una_devolucion(client, superusuario, con_recibos):
+    # T3.3: la conciliación del cargo muestra en línea los recibos devueltos.
+    l1 = recibo_de(con_recibos, "L1")
+    cobro, devolucion = importar(
+        con_recibos, abono(str(l1.importe), dia=10), cargo(str(l1.importe), dia=20)
+    )
+    conciliar_con_recibos(cobro, [l1])
+    conciliacion = conciliar_devolucion(devolucion, [l1])
+    client.force_login(superusuario)
+    ficha = client.get(reverse("admin:bancos_conciliacion_change", args=[conciliacion.pk]))
+    assert ficha.status_code == 200
+    assert l1.referencia in ficha.content.decode()
