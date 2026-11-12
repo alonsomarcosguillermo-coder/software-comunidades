@@ -10,6 +10,21 @@ celebrar juntas con votaciones y actas. Proyecto de aprendizaje; más adelante s
 - **Empleado del despacho**: igual que el administrador, con permisos que se puedan limitar.
 - **Vecino / propietario** (Fase 5): consulta sus recibos, documentos y vota en juntas.
 
+El cliente que paga es el **despacho** de administración de fincas: un profesional al que
+cada comunidad contrata para gestionarla (art. 13 LPH). Los propietarios siguen siendo los
+dueños de todo; el despacho trabaja y los vecinos consultan.
+
+| Quién | Qué hace en la aplicación | Estado |
+|---|---|---|
+| Administrador de fincas y sus empleados (usuarios del despacho) | Todo el trabajo: alta de comunidades, cuotas, recibos, banco, morosos, preparar y celebrar juntas, actas | Fases 1–4 |
+| Vecino (propietario con acceso al portal) | Ver sus recibos, su deuda y los documentos de su comunidad (convocatorias, actas); votar en las juntas a distancia | Fase 5 (T5.1, T5.2) |
+| Presidente | Un vecino con un cargo: lo del vecino y, más adelante, lo propio de su cargo | Cargos en T6.2 |
+
+Un vecino nunca ve la contabilidad ni la deuda de otros vecinos (salvo la relación de
+morosos que la ley obliga a incluir en la convocatoria, art. 16.2 LPH). Una comunidad
+pequeña sin administrador podría usarla como un despacho con una sola comunidad, pero no es
+el caso para el que se diseñan las pantallas.
+
 ## Qué hace la v1
 1. Despachos, usuarios y permisos; un despacho nunca ve datos de otro.
 2. Comunidades, inmuebles (pisos, locales, garajes, trasteros), propietarios y coeficientes.
