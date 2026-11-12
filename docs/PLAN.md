@@ -153,7 +153,13 @@ tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizad
   preparar/editar con formset del orden del día, detalle con vista previa y "Convocar".
   `EMAIL_BACKEND` por consola en desarrollo. Admin. `cargar_demo`: junta en borrador a 3
   semanas. Interpretaciones en DOMINIO.md (BOE consultado). ADR 013.
-- ⬜ **T4.2** Servicio puro de cálculo de mayorías `R-MAY-01..05`, `R-VOT-01`. Muchos tests.
+- ✅ **T4.2** Servicio puro de cálculo de mayorías `R-MAY-01..05`, `R-VOT-01`. Muchos tests.
+  Hecho: `juntas.mayorias.calcular` (doble mayoría; simple sobre el total en 1ª y sobre los
+  asistentes en 2ª; tres quintos y unanimidad sobre el total; ausentes no discrepantes a
+  favor si se aplica R-MAY-05; privados de voto fuera de la base) con recuentos y
+  explicación citando la regla, y `hay_quorum_primera` (R-JUN-03). Aritmética exacta. 34
+  tests: casos a mano por regla y 5 propiedades con hypothesis. Interpretaciones en
+  DOMINIO.md. ADR 014.
 - ⬜ **T4.3** Registro de asistencia y votos; borrador de acta.
 
 ## Fase 5 — Portal del vecino y salida
@@ -243,3 +249,5 @@ tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizad
 - Juntas: R-JUN-01 (una ordinaria al año) no se avisa. El formset del orden del día solo
   añade 3 filas por guardado y no permite reordenar arrastrando.
 - Juntas: revisar con protección de datos el envío por email de la relación de morosos.
+- Mayorías: no están las especiales del art. 17.1 y 17.2 LPH (un tercio, accesibilidad...) porque
+  no figuran en `DOMINIO.md`.

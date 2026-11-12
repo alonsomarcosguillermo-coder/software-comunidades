@@ -80,6 +80,26 @@ Interpretación aplicada en T4.1 (texto consolidado de la LPH en el BOE, actuali
   quien lo tiene y lista a los demás para citarlos a mano.
 - R-JUN-04 (telemáticas) sigue sin documentar: la v1 no las contempla.
 
+Interpretación aplicada en T4.2 (cálculo de mayorías, `juntas.mayorias`; pendiente de
+validar con un profesional):
+- R-MAY-02 en 1ª convocatoria es "la mayoría del total de los propietarios que, a su vez,
+  representen la mayoría de las cuotas" (art. 17.7); en 2ª, "la mayoría de los asistentes,
+  siempre que ésta represente, a su vez, más de la mitad del valor de las cuotas de los
+  presentes". Mayoría = más de la mitad (la mitad justa no basta).
+- En 2ª convocatoria las abstenciones cuentan como asistentes (en la base) pero no a favor.
+  Pregunta: hay doctrina que las trata de otra forma; confirmar.
+- R-MAY-03 y R-MAY-04 se cuentan siempre sobre el total, también en 2ª convocatoria. Tres
+  quintos = al menos 3/5 exactos (sin redondear).
+- R-MAY-05 se aplica a las mayorías sobre el total (simple en 1ª, tres quintos y
+  unanimidad), no a la simple en 2ª, que ya se cuenta sobre los presentes. Un ausente que
+  manifiesta su discrepancia en plazo cuenta como voto en contra. Las excepciones del
+  art. 17.8 se marcan por punto del orden del día.
+- R-VOT-01: el privado del derecho de voto no se computa "ni su persona ni su cuota" para las
+  mayorías (art. 15.2): sale de la base. Sí cuenta como asistente para el quórum.
+- Cada votante es un propietario con la suma de las cuotas de los inmuebles que representa.
+  Cotitulares: votan por medio de un representante (art. 15.1); cómo se elige se decide en
+  T4.3.
+
 ## Morosidad
 - **R-DEU-01** ⚠️ En la venta de un inmueble, el vendedor debe aportar certificado de la comunidad
   sobre el estado de deudas (art. 9.1.e LPH). El sistema genera ese certificado.
