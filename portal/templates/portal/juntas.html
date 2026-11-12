@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block titulo %}Juntas y actas{% endblock %}
+
+{% block contenido %}
+<h1>Juntas y actas</h1>
+{% include "portal/_menu.html" %}
+
+<section class="tarjeta">
+  {% if juntas %}
+    <table class="tabla">
+      <thead><tr><th>Fecha</th><th>Comunidad</th><th>Tipo</th><th>Documentos</th></tr></thead>
+      <tbody>
+        {% for junta in juntas %}
+          <tr>
+            <td>{{ junta.primera_convocatoria|date:"j/n/Y H:i" }}</td>
+            <td>{{ junta.comunidad.nombre }}</td>
+            <td>{{ junta.get_tipo_display }}</td>
+            <td><a href="{% url 'portal:junta' junta.pk %}">Convocatoria{% if junta.celebracion.esta_cerrada %} y acta{% endif %}</a></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="vacio">Tus comunidades no tienen juntas convocadas.</p>
+  {% endif %}
+</section>
+{% endblock %}

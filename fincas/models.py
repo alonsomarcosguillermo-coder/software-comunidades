@@ -1,6 +1,7 @@
 from datetime import date
 from decimal import Decimal
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator
 from django.db import models
@@ -132,6 +133,16 @@ class Propietario(models.Model):
     nif = models.CharField("NIF/NIE", max_length=9, blank=True)
     email = models.EmailField(blank=True)
     telefono = models.CharField("teléfono", max_length=20, blank=True)
+    # T5.1 — Su acceso al portal del vecino. Una misma persona puede ser propietaria en
+    # comunidades de varios despachos (una ficha en cada uno): un usuario, varias fichas.
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="propietarios",
+        verbose_name="usuario del portal",
+    )
 
     class Meta:
         verbose_name = "propietario"

@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block titulo %}Mis recibos{% endblock %}
+
+{% block contenido %}
+<h1>Mis recibos</h1>
+{% include "portal/_menu.html" %}
+
+<section class="tarjeta">
+  {% if recibos %}
+    <table class="tabla">
+      <thead><tr><th>Vence</th><th>Referencia</th><th>Comunidad</th><th>Concepto</th><th class="num">Importe</th><th>Estado</th></tr></thead>
+      <tbody>
+        {% for recibo in recibos %}
+          <tr>
+            <td>{{ recibo.vencimiento|date:"j/n/Y" }}</td>
+            <td>{{ recibo.referencia }}</td>
+            <td>{{ recibo.comunidad.nombre }} · {{ recibo.inmueble.referencia }}</td>
+            <td>{{ recibo.concepto }}</td>
+            <td class="num">{{ recibo.importe }} €</td>
+            <td>
+              {% if recibo.esta_cobrado %}<span class="estado ok">Pagado</span>
+              {% elif recibo.esta_devuelto %}<span class="estado mal">Devuelto por el banco: pendiente</span>
+              {% elif recibo.vencimiento < hoy %}<span class="estado mal">Vencido, sin pagar</span>
+              {% elif recibo.remesa %}<span class="estado">Se cargará en tu cuenta</span>
+              {% else %}<span class="estado">Pendiente</span>{% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="vacio">Para pagar un recibo por transferencia, pon su referencia en el concepto
+      (por ejemplo REC-1-7) para que se identifique solo.</p>
+  {% else %}
+    <p class="vacio">Todavía no tienes recibos.</p>
+  {% endif %}
+</section>
+{% endblock %}

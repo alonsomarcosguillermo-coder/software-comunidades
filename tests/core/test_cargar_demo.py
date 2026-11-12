@@ -314,3 +314,14 @@ def test_permisos_de_juntas(demo):
     assert admin.has_perm("juntas.add_celebracion")  # T4.3
     assert admin.has_perm("juntas.add_votoemitido")
     assert not empleado.has_perm("juntas.add_votoemitido")
+
+
+@pytest.mark.django_db
+def test_la_demo_tiene_una_vecina_con_portal(demo, client):
+    """T5.1: vecina.marta entra a su portal y ve sus recibos (es Marta Inventada)."""
+    usuario = authenticate(username="vecina.marta", password=CLAVE_DEMO)
+    assert usuario is not None and usuario.despacho is None
+    assert usuario.propietarios.get().nombre == "Marta Inventada"
+    client.force_login(usuario)
+    assert client.get(reverse("inicio"))["Location"] == reverse("portal:inicio")
+    assert client.get(reverse("portal:recibos")).status_code == 200

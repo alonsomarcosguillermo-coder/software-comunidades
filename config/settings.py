@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     "cobros",
     "bancos",
     "juntas",
+    "portal",
 ]
 
 MIDDLEWARE = [
@@ -62,6 +63,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "portal.contexto.portal",  # T5.1: es_vecino para el menú
             ],
         },
     },
@@ -92,7 +94,7 @@ AUTH_USER_MODEL = "core.Usuario"
 
 # Login propio de la aplicación (el del admin es aparte, en /admin/login/).
 LOGIN_URL = "login"
-LOGIN_REDIRECT_URL = "fincas:lista_comunidades"
+LOGIN_REDIRECT_URL = "inicio"  # T5.1: decide entre comunidades (despacho) y portal (vecino)
 LOGOUT_REDIRECT_URL = "login"
 
 AUTH_PASSWORD_VALIDATORS = [

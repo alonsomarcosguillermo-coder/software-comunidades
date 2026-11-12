@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block titulo %}Mi portal{% endblock %}
+
+{% block contenido %}
+<h1>Hola, {{ user.get_full_name|default:user.username }}</h1>
+{% include "portal/_menu.html" %}
+
+<section class="tarjeta">
+  <h2>Mis inmuebles</h2>
+  {% if resumen.titularidades %}
+    <ul>
+      {% for t in resumen.titularidades %}
+        <li>{{ t.inmueble.comunidad.nombre }} · {{ t.inmueble.get_tipo_display }} {{ t.inmueble.referencia }} ({{ t.inmueble.coeficiente|floatformat:"-4" }} %)</li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="vacio">Ahora mismo no figuras como titular de ningún inmueble.</p>
+  {% endif %}
+</section>
+
+<section class="tarjeta">
+  <h2>Pagos</h2>
+  {% if resumen.deuda.al_corriente %}
+    <p><span class="estado ok">Estás al corriente de pago</span></p>
+  {% else %}
+    <p><span class="estado mal">Tienes {{ resumen.deuda.vencidos|length }} recibo{{ resumen.deuda.vencidos|length|pluralize }} vencido{{ resumen.deuda.vencidos|length|pluralize }} sin pagar: {{ resumen.deuda.total_vencido }} €</span></p>
+    <p class="vacio">Mientras tengas deudas vencidas con la comunidad no podrás votar en las juntas, aunque sí asistir y opinar (art. 15.2 LPH).</p>
+  {% endif %}
+  {% if resumen.deuda.por_vencer %}
+    <p>Próximos recibos: {{ resumen.deuda.por_vencer|length }} por {{ resumen.deuda.total_por_vencer }} €.</p>
+  {% endif %}
+  <p><a href="{% url 'portal:recibos' %}">Ver todos mis recibos</a></p>
+</section>
+
+<section class="tarjeta">
+  <h2>Próximas juntas</h2>
+  {% for junta in resumen.proximas_juntas %}
+    <p><a href="{% url 'portal:junta' junta.pk %}">{{ junta.comunidad.nombre }}: junta {{ junta.get_tipo_display|lower }} el {{ junta.primera_convocatoria|date:"j/n/Y \a \l\a\s H:i" }}</a></p>
+  {% empty %}
+    <p class="vacio">No hay juntas convocadas.</p>
+  {% endfor %}
+</section>
+{% endblock %}

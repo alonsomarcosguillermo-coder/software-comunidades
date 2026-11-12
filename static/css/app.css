@@ -136,3 +136,6 @@ form.fecha-deuda input[type="date"] { padding: 0.35rem 0.5rem; border: 1px solid
 /* T4.1: texto de la convocatoria tal cual se envía por email. */
 .convocatoria { white-space: pre-wrap; font-family: inherit; margin: 0; }
 .formulario p { margin: 0.5rem 0; }
+
+/* T5.1: menú del portal del vecino. */
+.menu-portal { display: flex; gap: 1rem; flex-wrap: wrap; margin: 0 0 1rem; }

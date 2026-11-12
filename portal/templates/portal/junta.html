@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block titulo %}Junta · {{ junta.comunidad.nombre }}{% endblock %}
+
+{% block contenido %}
+<h1>Junta {{ junta.get_tipo_display|lower }} del {{ junta.primera_convocatoria|date:"j/n/Y" }}</h1>
+{% include "portal/_menu.html" %}
+
+<section class="tarjeta">
+  <h2>Convocatoria</h2>
+  <pre class="convocatoria">{{ convocatoria }}</pre>
+</section>
+
+<section class="tarjeta">
+  <h2>Acta</h2>
+  {% if acta %}
+    <pre class="convocatoria">{{ acta }}</pre>
+  {% else %}
+    <p class="vacio">El acta todavía no está disponible.</p>
+  {% endif %}
+</section>
+{% endblock %}

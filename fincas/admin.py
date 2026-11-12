@@ -99,9 +99,11 @@ class InmuebleAdmin(admin.ModelAdmin):
 
 @admin.register(Propietario)
 class PropietarioAdmin(admin.ModelAdmin):
-    list_display = ["nombre", "despacho"]
+    list_display = ["nombre", "despacho", "usuario"]
     list_filter = ["despacho"]
     search_fields = ["nombre", "nif", "email"]
+    # T5.1: el acceso al portal se da con "Invitar al portal"; aquí solo se ve.
+    readonly_fields = ["usuario"]
     inlines = [TitularidadInline]
 
 

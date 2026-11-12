@@ -137,6 +137,9 @@ USUARIOS = [
     ("empleado.alfa", "Emilio Alfa", "Fincas Alfa", "Empleado del despacho", True),
     ("admin.beta", "Bea Beta", "Fincas Beta", "Administrador de fincas", True),
     ("vecino.lucia", "Lucía Vecina", None, "Vecino", False),
+    # T5.1 — Vecina con acceso al portal: es la propietaria Marta Inventada (sin mandato,
+    # paga por transferencia y tiene recibos pendientes).
+    ("vecina.marta", "Marta Inventada", None, "Vecino", False),
 ]
 
 P, L, G, T = Inmueble.Tipo.PISO, Inmueble.Tipo.LOCAL, Inmueble.Tipo.GARAJE, Inmueble.Tipo.TRASTERO
@@ -289,6 +292,7 @@ class Command(BaseCommand):
             self._recibos()
             self._extractos()
             self._juntas()
+            self._portal()
 
         self.stdout.write(self.style.SUCCESS("Datos de demo cargados."))
         self.stdout.write(f"Usuarios (clave «{CLAVE_DEMO}» si se acaban de crear):")
@@ -478,6 +482,15 @@ class Command(BaseCommand):
                 },
             )
         generar_recibos(comunidad)  # solo crea los que falten
+
+    def _portal(self):
+        """T5.1 — Enlaza la usuaria vecina.marta con su ficha de propietaria."""
+        propietaria = Propietario.objects.get(
+            despacho__nombre="Fincas Alfa", nombre=SIN_MANDATO_PAGA_POR_TRANSFERENCIA
+        )
+        if propietaria.usuario_id is None:
+            propietaria.usuario = Usuario.objects.get(username="vecina.marta")
+            propietaria.save(update_fields=["usuario"])
 
     def _juntas(self):
         """T4.1 — Una junta ordinaria en borrador dentro de tres semanas, para convocarla

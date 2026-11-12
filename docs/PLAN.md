@@ -171,7 +171,14 @@ tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizad
   acciones; admin de solo lectura. ADR 015.
 
 ## Fase 5 — Portal del vecino y salida
-- ⬜ **T5.1** Portal: recibos, deuda, documentos.
+- ✅ **T5.1** Portal: recibos, deuda, documentos.
+  Hecho: app `portal`. `Propietario.usuario` (un usuario, varias fichas). Consultas por
+  usuario en `portal.consultas` (sus recibos, su deuda con T3.4, convocatorias y actas
+  cerradas de sus comunidades actuales). Páginas: resumen, mis recibos (con referencia para
+  pagar por transferencia), juntas y actas. Despacho: página "Vecinos" por comunidad con
+  "Invitar al portal" (email con enlace para elegir contraseña, token de Django) y
+  "¿Olvidaste tu contraseña?". `inicio` reparte despacho → comunidades, vecino → portal;
+  menú según el rol. Demo: `vecina.marta`. ADR 016.
 - ⬜ **T5.2** Votación online del vecino.
 - ⬜ **T5.3** GitHub + CI (GitHub Actions con PostgreSQL de servicio).
 

@@ -43,9 +43,9 @@ def test_la_pagina_de_login_carga(client):
 
 @pytest.mark.django_db
 def test_login_correcto_lleva_a_la_lista_de_comunidades(client, ana):
-    respuesta = client.post(reverse("login"), {"username": "ana", "password": CLAVE})
-    assert respuesta.status_code == 302
-    assert respuesta.url == URL_LISTA
+    # T5.1: el login lleva a "/" (inicio), que manda al despacho a sus comunidades.
+    respuesta = client.post(reverse("login"), {"username": "ana", "password": CLAVE}, follow=True)
+    assert respuesta.redirect_chain[-1] == (URL_LISTA, 302)
 
 
 @pytest.mark.django_db

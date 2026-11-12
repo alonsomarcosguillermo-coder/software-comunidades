@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block titulo %}Vecinos · {{ comunidad.nombre }}{% endblock %}
+
+{% block contenido %}
+<p class="migas"><a href="{% url 'fincas:lista_comunidades' %}">Comunidades</a> ›
+  <a href="{% url 'cobros:presupuestos_comunidad' comunidad.pk %}">{{ comunidad.nombre }}</a> › Vecinos</p>
+<h1>Vecinos de {{ comunidad.nombre }}</h1>
+
+<section class="tarjeta">
+  <p class="vacio">Titulares actuales. "Invitar al portal" envía un email con un enlace para que
+    el vecino elija su contraseña: así puede ver sus recibos, su deuda y las convocatorias y
+    actas de la comunidad.</p>
+  <table class="tabla">
+    <thead><tr><th>Propietario</th><th>Inmuebles</th><th>Email</th><th>Portal</th></tr></thead>
+    <tbody>
+      {% for propietario, inmuebles in vecinos %}
+        <tr>
+          <td>{{ propietario.nombre }}</td>
+          <td>{{ inmuebles|join:", " }}</td>
+          <td>{{ propietario.email|default:"—" }}</td>
+          <td>
+            {% if propietario.usuario %}
+              <span class="estado ok">{% if propietario.usuario.has_usable_password %}Tiene acceso{% else %}Invitado{% endif %}</span>
+            {% endif %}
+            {% if puede_invitar and propietario.email %}
+              <form method="post" action="{% url 'portal:invitar_vecino' comunidad.pk propietario.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="boton-enlace">{% if propietario.usuario %}Reenviar invitación{% else %}Invitar al portal{% endif %}</button>
+              </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="4" class="vacio">La comunidad no tiene titulares.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

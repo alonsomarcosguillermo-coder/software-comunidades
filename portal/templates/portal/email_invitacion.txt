@@ -1,0 +1,12 @@
+{% autoescape off %}Hola, {{ propietario.nombre }}:
+
+{{ despacho.nombre }}, que administra tu comunidad, te da acceso al portal del vecino. Allí puedes ver tus recibos, si tienes algo pendiente de pago y las convocatorias y actas de las juntas.
+
+Para entrar por primera vez, elige tu contraseña en este enlace (caduca en unos días y solo sirve una vez):
+
+{{ enlace }}
+
+Tu usuario es: {{ usuario.username }}
+
+Si no esperabas este email, ignóralo.
+{% endautoescape %}
