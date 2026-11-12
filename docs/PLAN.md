@@ -108,7 +108,18 @@ tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizad
   `/comunidades/<id>/extractos/` (subida con `bancos.add_extracto`) y detalle de movimientos.
   Admin de solo lectura. `cargar_demo` importa un extracto con el pago por transferencia de
   un recibo (referencia del recibo), una luz y una comisión. ADR 009.
-- ⬜ **T3.2** Conciliación automática (importe + referencia) y manual.
+- ✅ **T3.2** Conciliación automática (importe + referencia) y manual.
+  Hecho: `bancos.Conciliacion` (movimiento ↔ asiento; remesa o cuenta) y `CobroRecibo`
+  (recibo cobrado una sola vez, restricción en la BD). Propuesta pura
+  `bancos.servicios.proponer_conciliaciones`: abonos que mencionan `REC-…` (palabra completa)
+  con importe exacto, o el `MsgId` de una remesa con su total; ante cualquier ambigüedad no
+  propone (hypothesis: cada propuesta cuadra y no repite recibos). `bancos.conciliacion`:
+  con recibos (asiento 572 / 430 por recibo), con otra cuenta (no 572 ni 430), automática y
+  deshacer (contra-asiento + borra la conciliación). `Recibo.estado` = "cobrado". Web:
+  botón "Conciliar automáticamente", pendientes por extracto, estado y "Deshacer" por
+  movimiento, página de conciliación manual (recibos del importe exacto primero, o cuenta).
+  Admin de solo lectura. `cargar_demo`: permisos y cuenta 626; el extracto se deja sin
+  conciliar para probarlo. ADR 010.
 - ⬜ **T3.3** 🔀 Devoluciones de recibos → deuda del propietario.
 - ⬜ **T3.4** 🔀 Informe de morosos y certificado de deuda `R-DEU-01` (PDF).
 
@@ -180,3 +191,11 @@ tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizad
   huecos entre extractos (saldo inicial ≠ saldo final del anterior, o días sin extracto).
 - Extractos: los registros 24 (equivalencia en otra divisa) se admiten pero no se guardan.
 - Extractos: la página de movimientos no tiene paginación ni filtros.
+- Conciliación: sin pagos parciales de recibos ni cobros a cuenta (un vecino que paga de
+  menos sigue debiendo todo el recibo). La página manual lista todos los recibos
+  pendientes sin paginar ni buscar; tampoco suma en vivo los marcados.
+- Conciliación: no propone por importe + nombre del ordenante cuando falta la referencia.
+- Conciliación: `CobroRecibo.recibo` es único; T3.3 (devoluciones) debe permitir volver a
+  cobrar un recibo devuelto.
+- Conciliación: al deshacer se borra la fila de `Conciliacion`; el rastro queda solo en los
+  asientos (original y contra-asiento), no en quién concilió y quién deshizo.

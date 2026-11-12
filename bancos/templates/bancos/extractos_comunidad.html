@@ -24,13 +24,27 @@
 {% endif %}
 
 <section class="tarjeta">
-  <h2>Extractos importados</h2>
+  <div class="titulo-seccion">
+    <h2>Extractos importados</h2>
+    {% if puede_conciliar and hay_pendientes %}
+      <form method="post" class="emitir" action="{% url 'bancos:conciliar_automaticamente' comunidad.pk %}">
+        {% csrf_token %}
+        <button type="submit">Conciliar automáticamente</button>
+      </form>
+    {% endif %}
+  </div>
+  {% if puede_conciliar and hay_pendientes %}
+    <p class="vacio">La conciliación automática empareja cada abono con los recibos (o la
+      remesa) cuya referencia aparece en el movimiento y cuyo importe coincide al céntimo. Lo
+      que no encaje sin dudas se concilia a mano desde el extracto.</p>
+  {% endif %}
   {% if extractos %}
     <table class="tabla">
       <thead>
         <tr><th>Periodo</th><th>Cuenta</th><th class="num">Movimientos</th>
           <th class="num">Saldo inicial</th><th class="num">Abonos</th>
-          <th class="num">Cargos</th><th class="num">Saldo final</th><th>Fichero</th></tr>
+          <th class="num">Cargos</th><th class="num">Saldo final</th><th>Conciliación</th>
+          <th>Fichero</th></tr>
       </thead>
       <tbody>
         {% for extracto in extractos %}
@@ -43,6 +57,13 @@
             <td class="num">{{ extracto.abonos }} €</td>
             <td class="num">{{ extracto.cargos }} €</td>
             <td class="num">{{ extracto.saldo_final }} €</td>
+            <td>
+              {% if extracto.pendientes %}
+                <span class="estado mal">{{ extracto.pendientes }} pendientes</span>
+              {% else %}
+                <span class="estado ok">Conciliado</span>
+              {% endif %}
+            </td>
             <td>{{ extracto.nombre_fichero }}</td>
           </tr>
         {% endfor %}

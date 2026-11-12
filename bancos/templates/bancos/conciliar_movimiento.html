@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block titulo %}Conciliar · {{ comunidad.nombre }}{% endblock %}
+
+{% block contenido %}
+{% with extracto=movimiento.extracto %}
+<p class="migas"><a href="{% url 'fincas:lista_comunidades' %}">Comunidades</a> ›
+  <a href="{% url 'cobros:presupuestos_comunidad' comunidad.pk %}">{{ comunidad.nombre }}</a> ›
+  <a href="{% url 'bancos:extractos_comunidad' comunidad.pk %}">Extractos</a> ›
+  <a href="{% url 'bancos:detalle_extracto' comunidad.pk extracto.pk %}">{{ extracto.fecha_inicial|date:"j/n/Y" }} – {{ extracto.fecha_final|date:"j/n/Y" }}</a> ›
+  Conciliar</p>
+{% endwith %}
+<h1>Conciliar un movimiento</h1>
+
+<section class="tarjeta">
+  <dl class="datos">
+    <dt>Fecha</dt><dd>{{ movimiento.fecha_operacion|date:"j/n/Y" }}</dd>
+    <dt>Importe</dt><dd class="num">{{ movimiento.importe }} €</dd>
+    <dt>Concepto</dt><dd>{{ movimiento.nombre_concepto }}</dd>
+    {% if movimiento.conceptos %}<dt>Texto del banco</dt><dd>{{ movimiento.conceptos|linebreaksbr }}</dd>{% endif %}
+    {% if movimiento.referencia_1 or movimiento.referencia_2 %}
+      <dt>Referencias</dt><dd>{{ movimiento.referencia_1 }} {{ movimiento.referencia_2 }}</dd>
+    {% endif %}
+  </dl>
+</section>
+
+{% if movimiento.es_abono %}
+  <section class="tarjeta">
+    <h2>Recibos que paga</h2>
+    <p class="vacio">Marca los recibos que paga este abono. Su suma tiene que ser exactamente
+      {{ movimiento.importe }} €. Arriba, los que coinciden con el importe.</p>
+    {% if recibos %}
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="recibos">
+        <table class="tabla">
+          <thead><tr><th></th><th>Recibo</th><th>Concepto</th><th>Pagador</th><th>Vence</th>
+            <th class="num">Importe</th></tr></thead>
+          <tbody>
+            {% for recibo in recibos %}
+              <tr>
+                <td><input type="checkbox" name="recibos" value="{{ recibo.pk }}" id="recibo-{{ recibo.pk }}"></td>
+                <td><label for="recibo-{{ recibo.pk }}">{{ recibo.referencia }}</label></td>
+                <td>{{ recibo.concepto }} · {{ recibo.inmueble.referencia }}</td>
+                <td>{{ recibo.propietario.nombre }}</td>
+                <td>{{ recibo.vencimiento|date:"j/n/Y" }}</td>
+                <td class="num">
+                  {% if recibo.importe == movimiento.importe %}<span class="estado ok">{{ recibo.importe }} €</span>{% else %}{{ recibo.importe }} €{% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        <p><button type="submit">Conciliar con los recibos marcados</button></p>
+      </form>
+    {% else %}
+      <p class="vacio">No hay recibos pendientes de cobro en esta comunidad.</p>
+    {% endif %}
+  </section>
+{% endif %}
+
+<section class="tarjeta">
+  <h2>Otra cuenta contable</h2>
+  <p class="vacio">Para lo que no es un recibo: un gasto, una comisión, unos intereses... El
+    asiento va entre el banco (572) y la cuenta que elijas.</p>
+  {% if cuentas %}
+    <form method="post" class="emitir">
+      {% csrf_token %}
+      <input type="hidden" name="accion" value="cuenta">
+      <select name="cuenta" required>
+        <option value="">— elige una cuenta —</option>
+        {% for cuenta in cuentas %}<option value="{{ cuenta.pk }}">{{ cuenta.codigo }} · {{ cuenta.nombre }}</option>{% endfor %}
+      </select>
+      <button type="submit">Conciliar con esta cuenta</button>
+    </form>
+  {% else %}
+    <p class="vacio">La comunidad no tiene cuentas contables aparte del banco y los
+      propietarios. Créalas en el admin.</p>
+  {% endif %}
+</section>
+{% endblock %}

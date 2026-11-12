@@ -26,7 +26,7 @@
     <table class="tabla">
       <thead>
         <tr><th>Fecha</th><th>Valor</th><th>Concepto</th><th>Referencias</th>
-          <th class="num">Importe</th></tr>
+          <th class="num">Importe</th><th>Conciliación</th></tr>
       </thead>
       <tbody>
         {% for movimiento in movimientos %}
@@ -39,6 +39,27 @@
             </td>
             <td>{{ movimiento.referencia_1 }}{% if movimiento.referencia_2 %}<br>{{ movimiento.referencia_2 }}{% endif %}</td>
             <td class="num">{% if movimiento.es_abono %}<span class="estado ok">{{ movimiento.importe }} €</span>{% else %}{{ movimiento.importe }} €{% endif %}</td>
+            <td>
+              {% with conciliacion=movimiento.conciliacion_o_none %}
+                {% if conciliacion %}
+                  {% if conciliacion.remesa %}Remesa {{ conciliacion.remesa.numero }}:{% endif %}
+                  {% for cobro in conciliacion.cobros.all %}{{ cobro.recibo.referencia }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                  {% if conciliacion.cuenta %}{{ conciliacion.cuenta.codigo }} {{ conciliacion.cuenta.nombre }}{% endif %}
+                  <br><span class="vacio">Asiento {{ conciliacion.asiento.numero }}{% if conciliacion.automatica %} · automática{% endif %}</span>
+                  {% if puede_deshacer %}
+                    <form method="post" action="{% url 'bancos:deshacer_conciliacion' comunidad.pk movimiento.pk %}">
+                      {% csrf_token %}
+                      <button type="submit" class="boton-enlace">Deshacer</button>
+                    </form>
+                  {% endif %}
+                {% else %}
+                  <span class="estado mal">Pendiente</span>
+                  {% if puede_conciliar %}
+                    <a href="{% url 'bancos:conciliar_movimiento' comunidad.pk movimiento.pk %}">Conciliar</a>
+                  {% endif %}
+                {% endif %}
+              {% endwith %}
+            </td>
           </tr>
         {% endfor %}
       </tbody>

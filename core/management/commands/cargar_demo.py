@@ -77,6 +77,10 @@ GRUPOS = {
         "bancos.view_extracto",
         "bancos.add_extracto",
         "bancos.view_movimiento",
+        "bancos.view_conciliacion",
+        "bancos.add_conciliacion",
+        "bancos.delete_conciliacion",
+        "bancos.view_cobrorecibo",
     ],
     "Empleado del despacho": [
         "fincas.view_comunidad",
@@ -103,6 +107,8 @@ GRUPOS = {
         "cobros.view_remesa",
         "bancos.view_extracto",
         "bancos.view_movimiento",
+        "bancos.view_conciliacion",
+        "bancos.view_cobrorecibo",
     ],
     "Vecino": [],  # el portal del vecino llega en la Fase 5
 }
@@ -148,6 +154,7 @@ CUENTAS = [
     ("572", "Banco"),
     ("430", "Propietarios"),
     ("622", "Limpieza"),
+    ("626", "Servicios bancarios"),  # T3.2: para conciliar las comisiones del extracto
     ("628", "Suministros (luz)"),
     ("705", "Cuotas ordinarias"),
     ("113", "Fondo de reserva"),  # código de ejemplo; lo que cuenta es `es_fondo_reserva`

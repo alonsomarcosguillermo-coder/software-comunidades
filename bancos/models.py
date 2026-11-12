@@ -2,15 +2,18 @@
 
 Un `Extracto` es una cuenta de un fichero Norma 43 (un bloque 11 … 33): los movimientos de
 la cuenta de la comunidad entre dos fechas. Se crea con `bancos.importacion.importar_norma43`
-y, como los asientos, es inmutable: es lo que dijo el banco y no se retoca. La conciliación
-(T3.2) los enlazará con recibos y asientos desde otro modelo, sin modificarlos.
+y, como los asientos, es inmutable: es lo que dijo el banco y no se retoca.
+
+La conciliación (T3.2) enlaza cada movimiento con los recibos que paga o con otra cuenta
+contable, desde su propio modelo (`Conciliacion`), sin modificar el movimiento.
 """
 
 from django.conf import settings
 from django.db import models
 from django.db.models import F, Q
 
-from contabilidad.models import InmutableQuerySet, ModeloInmutable
+from cobros.models import Recibo, Remesa
+from contabilidad.models import Asiento, Cuenta, InmutableQuerySet, ModeloInmutable
 from fincas.models import Comunidad
 
 from .norma43 import nombre_concepto_comun
@@ -100,9 +103,76 @@ class Movimiento(ModeloInmutable):
     def es_abono(self) -> bool:
         return self.importe > 0
 
+    @property
+    def conciliacion_o_none(self) -> "Conciliacion | None":
+        """La conciliación, o None si está pendiente. (`movimiento.conciliacion` lanza una
+        excepción cuando no existe, y las plantillas la convertirían en "".)"""
+        return getattr(self, "conciliacion", None)
+
+
+class Conciliacion(models.Model):
+    """T3.2 — Un movimiento del banco explicado en la contabilidad (ADR 010).
+
+    O paga recibos (`cobros`, quizá todos los de una `remesa`) con el asiento 572 / 430, o
+    se lleva a otra `cuenta` contable (un gasto, una comisión...) con su asiento contra 572.
+    Se crea con `bancos.conciliacion` y no se edita: si está mal, se deshace (contra-asiento
+    del asiento y se borra esta fila) y se vuelve a conciliar.
+    """
+
+    movimiento = models.OneToOneField(
+        Movimiento, on_delete=models.PROTECT, related_name="conciliacion"
+    )
+    asiento = models.OneToOneField(Asiento, on_delete=models.PROTECT, related_name="+")
+    remesa = models.ForeignKey(
+        Remesa, on_delete=models.PROTECT, null=True, blank=True, related_name="conciliaciones"
+    )
+    cuenta = models.ForeignKey(
+        Cuenta, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    automatica = models.BooleanField("automática", default=False)
+    creada_en = models.DateTimeField(auto_now_add=True)
+    creada_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+
+    class Meta:
+        verbose_name = "conciliación"
+        verbose_name_plural = "conciliaciones"
+        constraints = [
+            # Una remesa se cobra con recibos, nunca contra otra cuenta.
+            models.CheckConstraint(
+                condition=Q(remesa__isnull=True) | Q(cuenta__isnull=True),
+                name="conciliacion_remesa_o_cuenta",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"Conciliación de {self.movimiento} (asiento {self.asiento.numero})"
+
+
+class CobroRecibo(models.Model):
+    """Un recibo pagado por un movimiento conciliado. Un recibo se cobra una sola vez
+    (restricción en la BD). Las devoluciones (T3.3) tendrán que revisar esta regla."""
+
+    conciliacion = models.ForeignKey(Conciliacion, on_delete=models.CASCADE, related_name="cobros")
+    recibo = models.OneToOneField(Recibo, on_delete=models.PROTECT, related_name="cobro")
+
+    class Meta:
+        verbose_name = "cobro de recibo"
+        verbose_name_plural = "cobros de recibos"
+
+    def __str__(self) -> str:
+        return f"{self.recibo.referencia} cobrado"
+
 
 # Camino desde cada modelo hasta su despacho (ver core.aislamiento y ADR 002).
 CAMPO_DESPACHO = {
     Extracto: "comunidad__despacho",
     Movimiento: "extracto__comunidad__despacho",
+    Conciliacion: "movimiento__extracto__comunidad__despacho",
+    CobroRecibo: "conciliacion__movimiento__extracto__comunidad__despacho",
 }

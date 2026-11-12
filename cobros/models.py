@@ -566,8 +566,16 @@ class Recibo(models.Model):
         return f"REC-{self.comunidad_id}-{self.numero}"
 
     @property
+    def esta_cobrado(self) -> bool:
+        # T3.2: cobrado = un movimiento del banco conciliado lo paga (`bancos.CobroRecibo`,
+        # related_name "cobro"). hasattr no exige importar la app bancos.
+        return hasattr(self, "cobro")
+
+    @property
     def estado(self) -> str:
-        # Cobrado y devuelto llegarán con la Fase 3 (bancos y morosidad).
+        # Devuelto llegará con T3.3.
+        if self.esta_cobrado:
+            return "cobrado"
         return "remesado" if self.remesa_id else "pendiente"
 
 

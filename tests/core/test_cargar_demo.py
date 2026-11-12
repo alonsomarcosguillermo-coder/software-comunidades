@@ -259,9 +259,26 @@ def test_la_demo_tiene_un_extracto_con_el_pago_de_un_recibo(demo):
 
 
 @pytest.mark.django_db
+def test_con_la_demo_la_conciliacion_automatica_encuentra_el_pago(demo):
+    """T3.2: el extracto de demo se deja sin conciliar para probarlo desde la web; la
+    automática encuentra la transferencia con referencia y deja la luz y la comisión."""
+    from bancos.conciliacion import conciliar_automaticamente, movimientos_pendientes
+
+    comunidad = Comunidad.objects.get(nombre="CP Calle Ficticia 1")
+    assert movimientos_pendientes(comunidad).count() == 3
+    [hecha] = conciliar_automaticamente(comunidad)
+    assert hecha.cobros.get().recibo.propietario.nombre == "Marta Inventada"
+    assert movimientos_pendientes(comunidad).count() == 2
+    assert comunidad.cuentas.filter(codigo="626").exists()  # para la comisión, a mano
+
+
+@pytest.mark.django_db
 def test_permisos_de_extractos(demo):
     admin = authenticate(username="admin.alfa", password=CLAVE_DEMO)
     empleado = authenticate(username="empleado.alfa", password=CLAVE_DEMO)
     assert admin.has_perm("bancos.add_extracto")
     assert empleado.has_perm("bancos.view_extracto")
     assert not empleado.has_perm("bancos.add_extracto")
+    assert admin.has_perm("bancos.add_conciliacion")
+    assert admin.has_perm("bancos.delete_conciliacion")
+    assert not empleado.has_perm("bancos.add_conciliacion")

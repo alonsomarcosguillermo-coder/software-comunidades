@@ -16,4 +16,20 @@ urlpatterns = [
         views.DetalleExtracto.as_view(),
         name="detalle_extracto",
     ),
+    # T3.2 — Conciliación
+    path(
+        "<int:pk>/extractos/conciliar/",
+        views.ConciliarAutomaticamente.as_view(),
+        name="conciliar_automaticamente",
+    ),
+    path(
+        "<int:pk>/movimientos/<int:movimiento_pk>/conciliar/",
+        views.ConciliarMovimiento.as_view(),
+        name="conciliar_movimiento",
+    ),
+    path(
+        "<int:pk>/movimientos/<int:movimiento_pk>/deshacer/",
+        views.DeshacerConciliacion.as_view(),
+        name="deshacer_conciliacion",
+    ),
 ]
