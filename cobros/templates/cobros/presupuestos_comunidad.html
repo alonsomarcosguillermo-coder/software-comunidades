@@ -6,7 +6,8 @@
 <p class="migas"><a href="{% url 'fincas:lista_comunidades' %}">Comunidades</a> › {{ comunidad.nombre }}</p>
 <h1>Presupuestos de {{ comunidad.nombre }}</h1>
 <p><a href="{% url 'cobros:derramas_comunidad' comunidad.pk %}">Ver las derramas</a> ·
-  <a href="{% url 'cobros:recibos_comunidad' comunidad.pk %}">Ver los recibos</a></p>
+  <a href="{% url 'cobros:recibos_comunidad' comunidad.pk %}">Ver los recibos</a> ·
+  <a href="{% url 'bancos:extractos_comunidad' comunidad.pk %}">Ver los extractos del banco</a></p>
 
 {# R-RES-01: fondo de reserva ≥ 10 % del último presupuesto ordinario aprobado. #}
 <section class="tarjeta">

@@ -97,7 +97,17 @@ tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizad
   Nueva dependencia `lxml`. ADR 008.
 
 ## Fase 3 — Bancos y morosidad
-- ⬜ **T3.1** 🔀 Importar extractos Norma 43.
+- ✅ **T3.1** 🔀 Importar extractos Norma 43.
+  Hecho: app `bancos`. Lector puro `bancos.norma43.leer_norma43` (registros 11/22/23/24/33/88,
+  CRLF/LF/sin saltos, latin-1; comprueba nº de apuntes, totales, saldo final y nº de
+  registros, y si algo no cuadra rechaza el fichero entero con el nº de línea) y escritor
+  `escribir_norma43` para tests y demo (hypothesis: ida y vuelta). `bancos.Extracto` (un
+  bloque 11…33, con sus registros originales) y `bancos.Movimiento` (+ abono / − cargo),
+  inmutables. `bancos.importacion.importar_norma43`: todo o nada; la cuenta debe ser la del
+  IBAN de cobro, solo euros, sin solapes de fechas con lo ya importado. Páginas
+  `/comunidades/<id>/extractos/` (subida con `bancos.add_extracto`) y detalle de movimientos.
+  Admin de solo lectura. `cargar_demo` importa un extracto con el pago por transferencia de
+  un recibo (referencia del recibo), una luz y una comisión. ADR 009.
 - ⬜ **T3.2** Conciliación automática (importe + referencia) y manual.
 - ⬜ **T3.3** 🔀 Devoluciones de recibos → deuda del propietario.
 - ⬜ **T3.4** 🔀 Informe de morosos y certificado de deuda `R-DEU-01` (PDF).
@@ -164,3 +174,9 @@ tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizad
   sus recibos a pendientes). Sin plazos de presentación ni días hábiles (ver R-SEPA-02).
 - Remesas: solo pain.008.001.02; si un banco exige una versión nueva (.001.08), añadirla.
 - Mandatos: no se controla la caducidad por falta de uso (36 meses, EPC) ni el preaviso.
+- Extractos: solo la cuenta de cobro de la comunidad (`iban_cobros`); falta un modelo de
+  cuentas bancarias si una comunidad tiene varias (y enlazarlas con su cuenta 572).
+- Extractos: no se pueden anular si se importan por error (inmutables). Tampoco se avisa de
+  huecos entre extractos (saldo inicial ≠ saldo final del anterior, o días sin extracto).
+- Extractos: los registros 24 (equivalencia en otra divisa) se admiten pero no se guardan.
+- Extractos: la página de movimientos no tiene paginación ni filtros.

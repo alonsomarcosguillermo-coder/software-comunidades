@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block titulo %}Extracto · {{ extracto.comunidad.nombre }}{% endblock %}
+
+{% block contenido %}
+{% with comunidad=extracto.comunidad %}
+<p class="migas"><a href="{% url 'fincas:lista_comunidades' %}">Comunidades</a> ›
+  <a href="{% url 'cobros:presupuestos_comunidad' comunidad.pk %}">{{ comunidad.nombre }}</a> ›
+  <a href="{% url 'bancos:extractos_comunidad' comunidad.pk %}">Extractos</a> ›
+  {{ extracto.fecha_inicial|date:"j/n/Y" }} – {{ extracto.fecha_final|date:"j/n/Y" }}</p>
+<h1>Extracto del {{ extracto.fecha_inicial|date:"j/n/Y" }} al {{ extracto.fecha_final|date:"j/n/Y" }}</h1>
+
+<section class="tarjeta">
+  <dl class="datos">
+    <dt>Cuenta</dt><dd>{{ extracto.cuenta_oculta }}</dd>
+    <dt>Saldo inicial</dt><dd class="num">{{ extracto.saldo_inicial }} €</dd>
+    <dt>Saldo final</dt><dd class="num">{{ extracto.saldo_final }} €</dd>
+    <dt>Fichero</dt><dd>{{ extracto.nombre_fichero }}</dd>
+    <dt>Importado</dt><dd>{{ extracto.importado_en|date:"j/n/Y H:i" }}</dd>
+  </dl>
+</section>
+
+<section class="tarjeta">
+  <h2>Movimientos</h2>
+  {% if movimientos %}
+    <table class="tabla">
+      <thead>
+        <tr><th>Fecha</th><th>Valor</th><th>Concepto</th><th>Referencias</th>
+          <th class="num">Importe</th></tr>
+      </thead>
+      <tbody>
+        {% for movimiento in movimientos %}
+          <tr>
+            <td>{{ movimiento.fecha_operacion|date:"j/n/Y" }}</td>
+            <td>{{ movimiento.fecha_valor|date:"j/n/Y" }}</td>
+            <td>
+              <span class="vacio">{{ movimiento.nombre_concepto }}</span>
+              {% if movimiento.conceptos %}<br>{{ movimiento.conceptos|linebreaksbr }}{% endif %}
+            </td>
+            <td>{{ movimiento.referencia_1 }}{% if movimiento.referencia_2 %}<br>{{ movimiento.referencia_2 }}{% endif %}</td>
+            <td class="num">{% if movimiento.es_abono %}<span class="estado ok">{{ movimiento.importe }} €</span>{% else %}{{ movimiento.importe }} €{% endif %}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="vacio">El extracto no tiene movimientos.</p>
+  {% endif %}
+</section>
+{% endwith %}
+{% endblock %}

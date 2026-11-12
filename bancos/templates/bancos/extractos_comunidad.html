@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block titulo %}Extractos · {{ comunidad.nombre }}{% endblock %}
+
+{% block contenido %}
+<p class="migas"><a href="{% url 'fincas:lista_comunidades' %}">Comunidades</a> ›
+  <a href="{% url 'cobros:presupuestos_comunidad' comunidad.pk %}">{{ comunidad.nombre }}</a> › Extractos</p>
+<h1>Extractos del banco de {{ comunidad.nombre }}</h1>
+
+{% if puede_importar %}
+  <section class="tarjeta">
+    <h2>Importar un extracto (Norma 43)</h2>
+    {# enctype multipart: sin él, el navegador no envía el contenido del fichero. #}
+    <form method="post" class="emitir" enctype="multipart/form-data"
+          action="{% url 'bancos:importar_extracto' comunidad.pk %}">
+      {% csrf_token %}
+      <input type="file" name="fichero" required>
+      <button type="submit">Importar</button>
+    </form>
+    <p class="vacio">Descárgalo de la banca online en formato «Norma 43» o «Cuaderno 43»
+      (a veces .n43, .aeb o .txt). Debe ser de la cuenta de cobro de la comunidad y no
+      repetir días ya importados. Si el fichero no cuadra, no se importa nada.</p>
+  </section>
+{% endif %}
+
+<section class="tarjeta">
+  <h2>Extractos importados</h2>
+  {% if extractos %}
+    <table class="tabla">
+      <thead>
+        <tr><th>Periodo</th><th>Cuenta</th><th class="num">Movimientos</th>
+          <th class="num">Saldo inicial</th><th class="num">Abonos</th>
+          <th class="num">Cargos</th><th class="num">Saldo final</th><th>Fichero</th></tr>
+      </thead>
+      <tbody>
+        {% for extracto in extractos %}
+          <tr>
+            <td><a href="{% url 'bancos:detalle_extracto' comunidad.pk extracto.pk %}">
+              {{ extracto.fecha_inicial|date:"j/n/Y" }} – {{ extracto.fecha_final|date:"j/n/Y" }}</a></td>
+            <td>{{ extracto.cuenta_oculta }}</td>
+            <td class="num">{{ extracto.num_movimientos }}</td>
+            <td class="num">{{ extracto.saldo_inicial }} €</td>
+            <td class="num">{{ extracto.abonos }} €</td>
+            <td class="num">{{ extracto.cargos }} €</td>
+            <td class="num">{{ extracto.saldo_final }} €</td>
+            <td>{{ extracto.nombre_fichero }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="vacio">Todavía no hay extractos importados.</p>
+  {% endif %}
+</section>
+{% endblock %}

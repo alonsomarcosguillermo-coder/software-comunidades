@@ -8,6 +8,7 @@ from django.contrib.auth.models import Group
 from django.core.management import CommandError, call_command
 from django.urls import reverse
 
+from bancos.models import Extracto, Movimiento
 from cobros.consultas import fondo_reserva_de
 from cobros.models import (
     Cuota,
@@ -52,6 +53,8 @@ MODELOS = [
     CuotaDerrama,
     Mandato,
     Recibo,
+    Extracto,
+    Movimiento,
 ]
 
 
@@ -237,3 +240,28 @@ def test_con_la_demo_se_puede_crear_una_remesa_valida(demo):
     remesa = crear_remesa(comunidad, timezone.localdate() + timedelta(days=7))
     assert remesa.num_recibos > 0
     validar_pain008(remesa.xml.encode())
+
+
+@pytest.mark.django_db
+def test_la_demo_tiene_un_extracto_con_el_pago_de_un_recibo(demo):
+    """T3.1: la vecina sin mandato paga por transferencia con la referencia del recibo."""
+    comunidad = Comunidad.objects.get(nombre="CP Calle Ficticia 1")
+    extracto = Extracto.objects.get(comunidad=comunidad)
+    assert extracto.saldo_final == extracto.saldo_inicial + sum(
+        extracto.movimientos.values_list("importe", flat=True)
+    )
+    recibo = Recibo.objects.filter(
+        comunidad=comunidad, propietario__nombre="Marta Inventada"
+    ).order_by("numero")[0]
+    pago = extracto.movimientos.get(referencia_1=recibo.referencia)
+    assert pago.importe == recibo.importe
+    assert not Mandato.objects.filter(propietario=recibo.propietario).exists()
+
+
+@pytest.mark.django_db
+def test_permisos_de_extractos(demo):
+    admin = authenticate(username="admin.alfa", password=CLAVE_DEMO)
+    empleado = authenticate(username="empleado.alfa", password=CLAVE_DEMO)
+    assert admin.has_perm("bancos.add_extracto")
+    assert empleado.has_perm("bancos.view_extracto")
+    assert not empleado.has_perm("bancos.add_extracto")

@@ -8,7 +8,8 @@ Es idempotente: se puede ejecutar varias veces sin duplicar nada. Solo funciona 
 DEBUG activo, para no crear nunca usuarios con una clave conocida en producción.
 """
 
-from datetime import date
+import calendar
+from datetime import date, timedelta
 from decimal import Decimal
 
 from django.conf import settings
@@ -16,11 +17,14 @@ from django.contrib.auth.models import Group, Permission
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
+from bancos.importacion import importar_norma43
+from bancos.norma43 import ExtractoCuenta, cuenta_de_iban, escribir_norma43
+from bancos.norma43 import Movimiento as MovimientoN43
 from cobros.derramas import emitir_derrama
 from cobros.emision import emitir_cuotas
 from cobros.models import Derrama, Mandato, Partida, Presupuesto
 from cobros.recibos import generar_recibos
-from cobros.sepa.identificadores import construir_iban
+from cobros.sepa.identificadores import construir_iban, texto_sepa
 from contabilidad.models import Cuenta
 from contabilidad.registro import anular_asiento, registrar_asiento
 from contabilidad.servicios import Linea
@@ -70,6 +74,9 @@ GRUPOS = {
         "cobros.add_recibo",
         "cobros.view_remesa",
         "cobros.add_remesa",
+        "bancos.view_extracto",
+        "bancos.add_extracto",
+        "bancos.view_movimiento",
     ],
     "Empleado del despacho": [
         "fincas.view_comunidad",
@@ -94,6 +101,8 @@ GRUPOS = {
         "cobros.view_mandato",
         "cobros.view_recibo",
         "cobros.view_remesa",
+        "bancos.view_extracto",
+        "bancos.view_movimiento",
     ],
     "Vecino": [],  # el portal del vecino llega en la Fase 5
 }
@@ -216,6 +225,8 @@ NIF_DEMO = "H00000000"
 IBAN_COBROS_DEMO = construir_iban("ES", "99990000" + "100000000001")
 # Propietarios de la comunidad con contabilidad que han firmado un mandato SEPA.
 MANDATOS = ["Carmen Ejemplo", "Pablo Prueba", "Jorge Ficticio"]
+# T3.1 — Sin mandato: paga sus recibos por transferencia (aparece en el extracto de demo).
+SIN_MANDATO_PAGA_POR_TRANSFERENCIA = "Marta Inventada"
 
 
 def _email(texto: str) -> str:
@@ -244,6 +255,7 @@ class Command(BaseCommand):
             self._presupuestos()
             self._derramas()
             self._recibos()
+            self._extractos()
 
         self.stdout.write(self.style.SUCCESS("Datos de demo cargados."))
         self.stdout.write(f"Usuarios (clave «{CLAVE_DEMO}» si se acaban de crear):")
@@ -433,3 +445,62 @@ class Command(BaseCommand):
                 },
             )
         generar_recibos(comunidad)  # solo crea los que falten
+
+    def _extractos(self):
+        """T3.1 — Un extracto Norma 43 del mes del primer vencimiento, generado aquí mismo.
+
+        Incluye el pago por transferencia de un recibo de una vecina sin mandato SEPA (con
+        la referencia del recibo, para conciliarlo en T3.2), un recibo de luz y una comisión.
+        """
+        comunidad = Comunidad.objects.get(nombre=COMUNIDAD_CON_CONTABILIDAD)
+        if comunidad.extractos.exists():
+            return  # idempotente: no se vuelve a importar
+        recibo = (
+            comunidad.recibos.filter(propietario__nombre=SIN_MANDATO_PAGA_POR_TRANSFERENCIA)
+            .order_by("numero")
+            .first()
+        )
+        if recibo is None:
+            return
+        desde = recibo.vencimiento.replace(day=1)
+        hasta = desde.replace(day=calendar.monthrange(desde.year, desde.month)[1])
+        dia = min(recibo.vencimiento + timedelta(days=2), hasta)
+        entidad, oficina, cuenta = cuenta_de_iban(comunidad.iban_cobros)
+        extracto = ExtractoCuenta(
+            entidad=entidad,
+            oficina=oficina,
+            cuenta=cuenta,
+            fecha_inicial=desde,
+            fecha_final=hasta,
+            saldo_inicial=Decimal("2000.00"),
+            titular="CP CALLE FICTICIA 1",
+            movimientos=(
+                MovimientoN43(
+                    fecha_operacion=dia,
+                    fecha_valor=dia,
+                    concepto_comun="04",
+                    importe=recibo.importe,
+                    referencia_1=recibo.referencia[:12],
+                    conceptos=("TRANSFERENCIA DE MARTA INVENTADA", texto_sepa(recibo.concepto, 38)),
+                ),
+                MovimientoN43(
+                    fecha_operacion=hasta - timedelta(days=5),
+                    fecha_valor=hasta - timedelta(days=5),
+                    concepto_comun="03",
+                    importe=Decimal("-86.40"),
+                    conceptos=("RECIBO ELECTRICA FICTICIA SA",),
+                ),
+                MovimientoN43(
+                    fecha_operacion=hasta,
+                    fecha_valor=hasta,
+                    concepto_comun="17",
+                    importe=Decimal("-2.50"),
+                    conceptos=("COMISION MANTENIMIENTO",),
+                ),
+            ),
+        )
+        importar_norma43(
+            comunidad,
+            escribir_norma43([extracto]),
+            nombre_fichero=f"demo-{desde:%Y%m}.n43",
+        )

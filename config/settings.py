@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     "fincas",
     "contabilidad",
     "cobros",
+    "bancos",
 ]
 
 MIDDLEWARE = [
