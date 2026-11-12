@@ -121,7 +121,18 @@ tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizad
   Admin de solo lectura. `cargar_demo`: permisos y cuenta 626; el extracto se deja sin
   conciliar para probarlo. ADR 010.
 - ⬜ **T3.3** 🔀 Devoluciones de recibos → deuda del propietario.
-- ⬜ **T3.4** 🔀 Informe de morosos y certificado de deuda `R-DEU-01` (PDF).
+- ✅ **T3.4** 🔀 Informe de morosos y certificado de deuda `R-DEU-01` (PDF).
+  Hecho: la deuda se calcula a una fecha, no se guarda. Cálculo puro `cobros.morosidad`
+  (`ReciboDeuda` → `informe_morosos` por propietario y `estado_deuda` por inmueble; vencido =
+  vencimiento anterior a la fecha; cobrado = conciliado con un movimiento de esa fecha o
+  anterior; hypothesis: el informe cuadra con la deuda y cobrar nunca la aumenta).
+  `cobros.deudas` lee los recibos en una consulta (fecha de cobro por la relación `cobro`).
+  PDF con ReportLab en `cobros.pdf` (nueva dependencia `reportlab`): informe de morosos con
+  detalle de recibos y certificado R-DEU-01 por inmueble (deuda vencida, también de
+  titulares anteriores, y recibos por vencer aparte; firma en blanco). Página
+  `/comunidades/<id>/morosos/?fecha=` con enlaces a los dos PDF (`cobros.view_recibo`; fecha
+  futura no admitida). ADR 012. Al fusionar con T3.3: un recibo devuelto debe contar como no
+  cobrado en `cobros.deudas.recibos_deuda`.
 
 ## Fase 4 — Juntas
 - ⬜ **T4.1** Convocatoria (orden del día, plazos `R-JUN-02`, envío por email).
@@ -199,3 +210,9 @@ tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizad
   cobrar un recibo devuelto.
 - Conciliación: al deshacer se borra la fila de `Conciliacion`; el rastro queda solo en los
   asientos (original y contra-asiento), no en quién concilió y quién deshizo.
+- Morosidad: no hay registro de certificados de deuda emitidos (número, fecha, solicitante);
+  se generan al vuelo. Tampoco se envía el informe ni el certificado por email.
+- Morosidad: la deuda no se cruza con la contabilidad (saldo de la 430); si algún día hay
+  cobros fuera de la conciliación, el informe y el saldo contable podrían no coincidir.
+- Morosidad: la página de morosos no tiene paginación ni búsqueda de inmuebles; el informe
+  se calcula en Python con todos los recibos vencidos de la comunidad (bien para cientos).

@@ -123,6 +123,11 @@ form.emitir button { padding: 0.35rem 0.8rem; }
 .mensaje.warning { background: var(--aviso-fondo); }
 .mensaje.info { background: var(--superficie); border: 1px solid var(--borde); }
 
+/* Morosidad (T3.4) */
+form.fecha-deuda { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+form.fecha-deuda input[type="date"] { padding: 0.35rem 0.5rem; border: 1px solid var(--borde); border-radius: 6px; }
+.suave { color: var(--suave); font-size: 0.9rem; }
+
 @media (max-width: 640px) {
   /* En móvil, la lista de comunidades oculta la columna de dirección. */
   #tabla-comunidades .tabla th:nth-child(2), #tabla-comunidades .tabla td:nth-child(2) { display: none; }

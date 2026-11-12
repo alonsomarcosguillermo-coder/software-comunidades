@@ -2,6 +2,7 @@
 django>=5.2,<6          # Framework web: ORM, admin, usuarios, formularios
 psycopg[binary]>=3.2    # Conector de Python con PostgreSQL
 lxml>=5                 # XML: genera la remesa SEPA y la valida contra el XSD (T2.5)
+reportlab>=4.2          # PDF: informe de morosos y certificado de deuda (T3.4)
 
 # Desarrollo
 pytest>=8               # Tests

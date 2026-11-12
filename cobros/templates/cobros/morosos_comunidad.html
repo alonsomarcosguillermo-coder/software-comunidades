@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block titulo %}Morosos · {{ comunidad.nombre }}{% endblock %}
+
+{% block contenido %}
+<p class="migas"><a href="{% url 'fincas:lista_comunidades' %}">Comunidades</a> ›
+  <a href="{% url 'cobros:presupuestos_comunidad' comunidad.pk %}">{{ comunidad.nombre }}</a> › Morosos</p>
+<div class="titulo-seccion">
+  <h1>Morosos de {{ comunidad.nombre }}</h1>
+  <a href="{% url 'cobros:informe_morosos_pdf' comunidad.pk %}?fecha={{ fecha|date:'Y-m-d' }}">Descargar el informe (PDF)</a>
+</div>
+
+{# Un formulario GET: la fecha queda en la dirección, así se puede guardar o compartir. #}
+<form method="get" class="tarjeta fecha-deuda">
+  <label for="fecha">Deuda vencida a fecha</label>
+  <input type="date" id="fecha" name="fecha" value="{{ fecha|date:'Y-m-d' }}" max="{{ hoy|date:'Y-m-d' }}">
+  <button type="submit">Ver</button>
+</form>
+{% if error_fecha %}<p class="mensaje error">{{ error_fecha }}</p>{% endif %}
+
+<section class="tarjeta">
+  <h2>Propietarios con recibos vencidos sin cobrar</h2>
+  {% if informe.morosos %}
+    <p>{{ informe.morosos|length }} propietarios, {{ informe.num_recibos }} recibos,
+      <strong>{{ informe.total }} €</strong> en total.</p>
+    <table class="tabla">
+      <thead>
+        <tr><th>Propietario</th><th>Inmuebles</th><th>Recibos</th><th>Desde</th>
+          <th class="num">Deuda</th></tr>
+      </thead>
+      <tbody>
+        {% for moroso in informe.morosos %}
+          <tr>
+            <td>{{ moroso.propietario }}</td>
+            <td>{{ moroso.inmuebles|join:", " }}</td>
+            <td>
+              {% for recibo in moroso.recibos %}
+                {{ recibo.referencia }} ({{ recibo.vencimiento|date:"j/n/Y" }}, {{ recibo.importe }} €{% if recibo.remesado %}, remesado{% endif %}){% if not forloop.last %}<br>{% endif %}
+              {% endfor %}
+            </td>
+            <td>{{ moroso.mas_antiguo|date:"j/n/Y" }}</td>
+            <td class="num">{{ moroso.total }} €</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="suave">Un recibo remesado puede haberlo cobrado ya el banco aunque aún no se haya
+      conciliado el extracto.</p>
+  {% else %}
+    <p><span class="estado ok">Sin morosos</span> No hay recibos vencidos sin cobrar a
+      {{ fecha|date:"j/n/Y" }}.</p>
+  {% endif %}
+</section>
+
+<section class="tarjeta">
+  <h2>Certificado de deuda por inmueble</h2>
+  <p>Lo aporta el vendedor al vender el inmueble (R-DEU-01, art. 9.1.e LPH). Recoge la deuda
+    vencida a {{ fecha|date:"j/n/Y" }} y los recibos emitidos que aún no han vencido.</p>
+  {% if inmuebles %}
+    <ul>
+      {% for inmueble in inmuebles %}
+        <li><a href="{% url 'cobros:certificado_deuda_pdf' comunidad.pk inmueble.pk %}?fecha={{ fecha|date:'Y-m-d' }}">{{ inmueble.referencia }}</a>
+          ({{ inmueble.get_tipo_display|lower }})</li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>La comunidad no tiene inmuebles.</p>
+  {% endif %}
+</section>
+{% endblock %}

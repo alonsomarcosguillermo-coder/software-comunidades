@@ -1,12 +1,12 @@
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import date, timedelta
 from decimal import Decimal
 
 from django import forms
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.db.models import Prefetch, Sum
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect
 from django.utils import timezone
 from django.views import View
@@ -23,9 +23,11 @@ from .derramas import (
     reparto_emitido,
     reparto_previsto,
 )
+from .deudas import certificado_deuda_de, informe_morosos_de
 from .emision import EmisionInvalida, emitir_cuotas
 from .models import CAMPO_DESPACHO as CAMPO_DESPACHO_COBROS
 from .models import Derrama, Emision, Presupuesto
+from .pdf import pdf_certificado_deuda, pdf_informe_morosos
 from .recibos import generar_recibos
 from .remesas import RemesaInvalida, crear_remesa
 from .sepa.identificadores import iban_oculto
@@ -282,3 +284,92 @@ class DescargarRemesa(LoginRequiredMixin, PermissionRequiredMixin, View):
         respuesta = HttpResponse(remesa.xml.encode("utf-8"), content_type="application/xml")
         respuesta["Content-Disposition"] = f'attachment; filename="{remesa.nombre_fichero}"'
         return respuesta
+
+
+# --- Morosidad y certificado de deuda (T3.4) ---------------------------------------------
+
+
+class FormularioFechaDeuda(forms.Form):
+    """`?fecha=` de las páginas de deuda. Vacía = hoy. No se admite una fecha futura: la
+    deuda de mañana todavía no se conoce (aún se puede pagar)."""
+
+    fecha = forms.DateField(required=False)
+
+    def clean_fecha(self):
+        fecha = self.cleaned_data["fecha"]
+        if fecha and fecha > timezone.localdate():
+            raise forms.ValidationError("La fecha no puede ser posterior a hoy.")
+        return fecha or timezone.localdate()
+
+
+def _fecha_deuda(request) -> tuple[date, str]:
+    """La fecha pedida en `?fecha=` (o hoy) y, si no era válida, por qué."""
+    formulario = FormularioFechaDeuda(request.GET)
+    if formulario.is_valid():
+        return formulario.cleaned_data["fecha"], ""
+    errores = formulario.errors.get("fecha") or ["Fecha no válida."]
+    return timezone.localdate(), f"{errores[0]} Se muestra la deuda a hoy."
+
+
+def _respuesta_pdf(contenido: bytes, nombre: str) -> HttpResponse:
+    respuesta = HttpResponse(contenido, content_type="application/pdf")
+    # inline: el navegador lo abre en una pestaña (y desde ahí se puede guardar o imprimir).
+    respuesta["Content-Disposition"] = f'inline; filename="{nombre}"'
+    return respuesta
+
+
+class MorososComunidad(FiltradoPorDespachoMixin, PermissionRequiredMixin, DetailView):
+    """Propietarios con recibos vencidos sin cobrar en una fecha (`?fecha=`, por defecto
+    hoy), con enlaces al PDF del informe y al certificado de deuda de cada inmueble.
+
+    Son datos personales de deuda: exige `cobros.view_recibo`. Una comunidad de otro
+    despacho da 404.
+    """
+
+    model = Comunidad
+    campo_despacho = CAMPO_DESPACHO[Comunidad]
+    context_object_name = "comunidad"
+    template_name = "cobros/morosos_comunidad.html"
+    permission_required = "cobros.view_recibo"
+
+    def get_context_data(self, **kwargs):
+        fecha, error = _fecha_deuda(self.request)
+        return super().get_context_data(
+            fecha=fecha,
+            error_fecha=error,
+            hoy=timezone.localdate(),
+            informe=informe_morosos_de(self.object, fecha),
+            inmuebles=self.object.inmuebles.all(),
+            **kwargs,
+        )
+
+
+class InformeMorososPdf(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """GET: el informe de morosos en PDF, a la fecha `?fecha=` (por defecto, hoy)."""
+
+    permission_required = "cobros.view_recibo"
+
+    def get(self, request, pk):
+        comunidad = _comunidad_del_usuario(request, pk)
+        fecha, error = _fecha_deuda(request)
+        if error:
+            return HttpResponseBadRequest(error)
+        contenido = pdf_informe_morosos(comunidad, informe_morosos_de(comunidad, fecha))
+        return _respuesta_pdf(contenido, f"morosos-{comunidad.pk}-{fecha:%Y%m%d}.pdf")
+
+
+class CertificadoDeudaPdf(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """GET: R-DEU-01 — certificado de deuda de un inmueble en PDF, a `?fecha=` (o hoy)."""
+
+    permission_required = "cobros.view_recibo"
+
+    def get(self, request, pk, inmueble_pk):
+        comunidad = _comunidad_del_usuario(request, pk)
+        inmueble = get_object_or_404(comunidad.inmuebles, pk=inmueble_pk)
+        fecha, error = _fecha_deuda(request)
+        if error:
+            return HttpResponseBadRequest(error)
+        contenido = pdf_certificado_deuda(certificado_deuda_de(inmueble, fecha))
+        return _respuesta_pdf(
+            contenido, f"certificado-deuda-{comunidad.pk}-{inmueble.pk}-{fecha:%Y%m%d}.pdf"
+        )

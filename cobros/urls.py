@@ -28,4 +28,16 @@ urlpatterns = [
         views.DescargarRemesa.as_view(),
         name="descargar_remesa",
     ),
+    # T3.4 — Morosidad y certificado de deuda (R-DEU-01)
+    path("<int:pk>/morosos/", views.MorososComunidad.as_view(), name="morosos_comunidad"),
+    path(
+        "<int:pk>/morosos/informe.pdf",
+        views.InformeMorososPdf.as_view(),
+        name="informe_morosos_pdf",
+    ),
+    path(
+        "<int:pk>/inmuebles/<int:inmueble_pk>/certificado-deuda.pdf",
+        views.CertificadoDeudaPdf.as_view(),
+        name="certificado_deuda_pdf",
+    ),
 ]

@@ -64,6 +64,20 @@ Interpretación aplicada en T2.1 (pendiente de validar con un profesional):
 - **R-DEU-02** ⚠️ La deuda puede reclamarse por procedimiento monitorio con certificado del acuerdo
   de liquidación (art. 21 LPH). El sistema prepara la documentación, no la presenta.
 
+Interpretación aplicada en T3.4 (pendiente de validar con un profesional):
+- Deuda en una fecha = recibos vencidos (vencimiento anterior a esa fecha; el mismo día aún se
+  puede pagar) y no cobrados en ella. Cobrado = conciliado con un movimiento del banco de esa
+  fecha o anterior. Un recibo remesado sin conciliar todavía cuenta como deuda.
+- Moroso = propietario con deuda; cada recibo es deuda de su pagador (el titular en el
+  vencimiento). El informe de morosos agrupa por propietario.
+- El certificado R-DEU-01 es por inmueble: recoge toda la deuda vencida del inmueble, también
+  la de titulares anteriores, y menciona aparte los recibos emitidos que aún no han vencido.
+  No incluye el NIF de los titulares; deja en blanco la firma y el cargo.
+- Preguntas: ¿quién firma el certificado (secretario con el visto bueno del presidente)?
+  ¿Debe limitarse la deuda que afecta al inmueble a la del año en curso y los tres anteriores
+  (afección real, art. 9.1.e LPH) o recoger toda? ¿Cuenta como deuda un recibo remesado cuyo
+  cobro aún no consta? ¿Hay que llevar un registro numerado de certificados emitidos?
+
 ## Cobros SEPA (pendiente de detallar en la Fase 2)
 - **R-SEPA-01** ⚠️ Domiciliar un recibo exige un mandato SEPA firmado (identificador de mandato y
   fecha de firma) por cada titular de cuenta.
