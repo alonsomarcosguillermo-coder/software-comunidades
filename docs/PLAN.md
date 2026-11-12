@@ -160,7 +160,15 @@ tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizad
   explicación citando la regla, y `hay_quorum_primera` (R-JUN-03). Aritmética exacta. 34
   tests: casos a mano por regla y 5 propiedades con hypothesis. Interpretaciones en
   DOMINIO.md. ADR 014.
-- ⬜ **T4.3** Registro de asistencia y votos; borrador de acta.
+- ✅ **T4.3** Registro de asistencia y votos; borrador de acta.
+  Hecho: `Celebracion`, `Asistente`, `VotoEmitido` y `Discrepancia`. Votantes puros (un voto
+  por inmueble, representante de cotitulares, suma de cuotas por propietario).
+  `juntas.celebracion`: iniciar (deuda vencida al empezar con `cobros.deudas` → R-VOT-01,
+  impugnación o consignación, quórum y convocatoria aplicable R-JUN-03), votar por punto,
+  resultado con `juntas.mayorias`, cerrar el acta, notificar a los ausentes y discrepancias
+  en 30 días (R-MAY-05). Borrador del acta (art. 19) en página y .txt, con los privados de
+  voto (art. 15.2). Web: página de celebración con asistencia, votos, resultados en vivo y
+  acciones; admin de solo lectura. ADR 015.
 
 ## Fase 5 — Portal del vecino y salida
 - ⬜ **T5.1** Portal: recibos, deuda, documentos.
@@ -251,3 +259,6 @@ tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizad
 - Juntas: revisar con protección de datos el envío por email de la relación de morosos.
 - Mayorías: no están las especiales del art. 17.1 y 17.2 LPH (un tercio, accesibilidad...) porque
   no figuran en `DOMINIO.md`.
+- Juntas (T4.3): sin elegir en la web el representante de los cotitulares (el servicio lo
+  admite); sin corregir la asistencia una vez iniciada; sin libro de actas, firma ni envío
+  del acta. Revisar el borrador del acta contra el texto literal del art. 19 LPH.

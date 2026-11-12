@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block titulo %}Celebración · {{ comunidad.nombre }}{% endblock %}
+
+{% block contenido %}
+<p class="migas"><a href="{% url 'fincas:lista_comunidades' %}">Comunidades</a> ›
+  <a href="{% url 'cobros:presupuestos_comunidad' comunidad.pk %}">{{ comunidad.nombre }}</a> ›
+  <a href="{% url 'juntas:juntas_comunidad' comunidad.pk %}">Juntas</a> ›
+  <a href="{% url 'juntas:detalle_junta' comunidad.pk junta.pk %}">{{ junta.primera_convocatoria|date:"j/n/Y" }}</a> ›
+  Celebración</p>
+<div class="titulo-seccion">
+  <h1>Celebración de la junta del {{ junta.primera_convocatoria|date:"j/n/Y" }}</h1>
+  {% if celebracion %}<a href="{% url 'juntas:acta_junta' comunidad.pk junta.pk %}">Ver el borrador del acta</a>{% endif %}
+</div>
+
+{% if not celebracion %}
+  {# --- Antes de empezar: asistencia --- #}
+  {% if puede_iniciar %}
+    <form method="post" action="{% url 'juntas:iniciar_junta' comunidad.pk junta.pk %}">
+      {% csrf_token %}
+      <section class="tarjeta">
+        <h2>Mesa</h2>
+        <p><label for="presidente">Presidente</label> <input type="text" id="presidente" name="presidente" required></p>
+        <p><label for="secretario">Secretario</label> <input type="text" id="secretario" name="secretario" required></p>
+        <p><label for="inicio">Hora de inicio</label>
+          <input type="datetime-local" id="inicio" name="inicio" value="{{ inicio|date:'Y-m-d\TH:i' }}" required></p>
+      </section>
+      <section class="tarjeta">
+        <h2>Asistencia</h2>
+        <p class="vacio">Un votante por propietario, con las cuotas de sus inmuebles (si hay
+          cotitulares, vota el primero). Al iniciar se comprueba el quórum (R-JUN-03) y quién
+          no está al corriente de pago (R-VOT-01).</p>
+        <table class="tabla">
+          <thead><tr><th>Propietario</th><th class="num">Cuota</th><th>Asistencia</th><th>Representado por (art. 15.1)</th></tr></thead>
+          <tbody>
+            {% for propietario, cuota in votantes %}
+              <tr>
+                <td>{{ propietario.nombre }}</td>
+                <td class="num">{{ cuota|floatformat:"-4" }} %</td>
+                <td>
+                  <select name="asistencia-{{ propietario.pk }}">
+                    {% for valor, texto in asistencias %}<option value="{{ valor }}"{% if valor == "ausente" %} selected{% endif %}>{{ texto }}</option>{% endfor %}
+                  </select>
+                </td>
+                <td><input type="text" name="representante-{{ propietario.pk }}" placeholder="solo si está representado"></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        <p><button type="submit">Iniciar la junta</button></p>
+      </section>
+    </form>
+  {% else %}
+    <p class="vacio">La junta todavía no se ha iniciado.</p>
+  {% endif %}
+{% else %}
+  {# --- Junta iniciada --- #}
+  <section class="tarjeta">
+    <dl class="datos">
+      <dt>Inicio</dt><dd>{{ celebracion.iniciada_en|date:"j/n/Y H:i" }}, {{ celebracion.get_convocatoria_display|lower }} convocatoria</dd>
+      <dt>Preside</dt><dd>{{ celebracion.presidente }}</dd>
+      <dt>Secretario</dt><dd>{{ celebracion.secretario }}</dd>
+      <dt>Acta</dt><dd>{% if celebracion.esta_cerrada %}<span class="estado ok">Cerrada el {{ celebracion.cerrada_en|date:"j/n/Y" }}</span>{% else %}<span class="estado">Abierta</span>{% endif %}</dd>
+      <dt>Ausentes notificados</dt><dd>{{ celebracion.ausentes_notificados_el|date:"j/n/Y"|default:"—" }}</dd>
+    </dl>
+    {% if puede_cerrar %}
+      {% if not celebracion.esta_cerrada %}
+        <form method="post" action="{% url 'juntas:cerrar_acta' comunidad.pk junta.pk %}">
+          {% csrf_token %}<button type="submit">Cerrar el acta</button>
+        </form>
+      {% elif not celebracion.ausentes_notificados_el and ausentes %}
+        <form method="post" class="emitir" action="{% url 'juntas:notificar_ausentes' comunidad.pk junta.pk %}">
+          {% csrf_token %}
+          <label for="fecha-notificacion">Acuerdos notificados a los ausentes el</label>
+          <input type="date" id="fecha-notificacion" name="fecha" value="{{ hoy|date:'Y-m-d' }}" required>
+          <button type="submit">Anotar (R-MAY-05)</button>
+        </form>
+      {% endif %}
+    {% endif %}
+  </section>
+
+  <section class="tarjeta">
+    <h2>Asistentes</h2>
+    <table class="tabla">
+      <thead><tr><th>Propietario</th><th class="num">Cuota</th><th>Asistencia</th><th>Voto (R-VOT-01)</th></tr></thead>
+      <tbody>
+        {% for a in asistentes %}
+          <tr>
+            <td>{{ a.propietario.nombre }}</td>
+            <td class="num">{{ a.cuota|floatformat:"-4" }} %</td>
+            <td>{{ a.get_asistencia_display }}{% if a.representante %} ({{ a.representante }}){% endif %}</td>
+            <td>
+              {% if a.deuda %}
+                {% if a.privado_de_voto %}<span class="estado mal">Sin voto: debe {{ a.deuda }} €</span>{% else %}<span class="estado ok">Vota: deuda impugnada o consignada</span>{% endif %}
+                {% if puede_votar %}
+                  <form method="post" action="{% url 'juntas:cambiar_impugnacion' comunidad.pk junta.pk a.pk %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="impugnada" value="{% if a.privado_de_voto %}1{% else %}0{% endif %}">
+                    <button type="submit" class="boton-enlace">{% if a.privado_de_voto %}Acredita impugnación o consignación{% else %}Quitar{% endif %}</button>
+                  </form>
+                {% endif %}
+              {% else %}Al corriente{% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  {% for punto, r, filas, discrepan in puntos %}
+    <section class="tarjeta">
+      <h2>{{ punto.orden }}. {{ punto.titulo }}</h2>
+      {% if r is None %}
+        <p class="vacio">Sin votación.</p>
+      {% else %}
+        <p>
+          {% if r.aprobado %}<span class="estado ok">Aprobado</span>{% else %}<span class="estado mal">No aprobado</span>{% endif %}
+          A favor {{ r.a_favor.propietarios }} ({{ r.a_favor.cuotas|floatformat:"-4" }} %) ·
+          en contra {{ r.contra.propietarios }} ({{ r.contra.cuotas|floatformat:"-4" }} %) ·
+          abstenciones {{ r.abstencion.propietarios }} · ausentes {{ r.ausentes.propietarios }}
+          {% if r.privados.propietarios %}· sin voto {{ r.privados.propietarios }}{% endif %}
+        </p>
+        <p class="vacio">{{ r.explicacion }}</p>
+        {% if puede_votar %}
+          <form method="post" action="{% url 'juntas:votar_punto' comunidad.pk junta.pk punto.pk %}">
+            {% csrf_token %}
+            <table class="tabla">
+              <thead><tr><th>Votante</th>{% for valor, texto in sentidos %}<th>{{ texto }}</th>{% endfor %}</tr></thead>
+              <tbody>
+                {% for a, voto in filas %}
+                  <tr>
+                    <td>{{ a.propietario.nombre }}</td>
+                    {% for valor, texto in sentidos %}
+                      <td><input type="radio" name="voto-{{ a.pk }}" value="{{ valor }}" aria-label="{{ texto }}"{% if voto == valor %} checked{% endif %}></td>
+                    {% endfor %}
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+            <p><button type="submit">Guardar los votos</button> <span class="vacio">Sin marcar = abstención.</span></p>
+          </form>
+        {% endif %}
+        {% if celebracion.ausentes_notificados_el and punto.computa_ausentes %}
+          <h3>Ausentes que discrepan (R-MAY-05)</h3>
+          {% for d in discrepan %}<p>{{ d.asistente.propietario.nombre }}, el {{ d.fecha|date:"j/n/Y" }}</p>{% empty %}<p class="vacio">Ninguno por ahora.</p>{% endfor %}
+          {% if puede_discrepar and ausentes %}
+            <form method="post" class="emitir" action="{% url 'juntas:registrar_discrepancia' comunidad.pk junta.pk punto.pk %}">
+              {% csrf_token %}
+              <select name="asistente" aria-label="Ausente">{% for a in ausentes %}<option value="{{ a.pk }}">{{ a.propietario.nombre }}</option>{% endfor %}</select>
+              <input type="date" name="fecha" value="{{ hoy|date:'Y-m-d' }}" aria-label="Fecha" required>
+              <button type="submit">Registrar discrepancia</button>
+            </form>
+          {% endif %}
+        {% endif %}
+      {% endif %}
+    </section>
+  {% endfor %}
+{% endif %}
+{% endblock %}

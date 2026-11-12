@@ -100,6 +100,22 @@ validar con un profesional):
   Cotitulares: votan por medio de un representante (art. 15.1); cómo se elige se decide en
   T4.3.
 
+Interpretación aplicada en T4.3 (celebración y acta; pendiente de validar):
+- Votantes: cada inmueble vota una vez. Si tiene cotitulares, por el representante que
+  designen; si no consta, el primero por nombre. Un propietario con varios inmuebles cuenta
+  como un propietario con la suma de sus cuotas. Pregunta: ¿se cuenta como un propietario
+  por persona o uno por inmueble? (hay doctrina en ambos sentidos).
+- R-VOT-01: "deudas vencidas" = recibos vencidos e impagados el día de la junta, según el
+  informe de morosos de T3.4. La deuda se fija al iniciar; acreditar la impugnación judicial
+  o la consignación devuelve el voto.
+- Un asistente presente que no vota en un punto se cuenta como abstención.
+- R-MAY-05: los 30 días naturales empiezan el día de la notificación de los acuerdos a los
+  ausentes (anotado a mano); el ausente que comunica su discrepancia en plazo cuenta en
+  contra. El resultado se recalcula con la fecha del día.
+- Acta (art. 19): borrador con fecha y lugar, convocatoria, presidente y secretario,
+  asistentes con su cuota (y representantes), ausentes, privados de voto (art. 15.2) y
+  acuerdos con sus votos. Pendiente de cotejar con el texto literal del art. 19.
+
 ## Morosidad
 - **R-DEU-01** ⚠️ En la venta de un inmueble, el vendedor debe aportar certificado de la comunidad
   sobre el estado de deudas (art. 9.1.e LPH). El sistema genera ese certificado.

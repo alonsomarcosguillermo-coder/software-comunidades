@@ -45,6 +45,7 @@
 </section>
 
 {% if junta.esta_convocada %}
+  <p><a href="{% url 'juntas:celebracion' comunidad.pk junta.pk %}">Ir a la celebración: asistencia, votos y acta</a></p>
   <section class="tarjeta">
     <h2>Citaciones</h2>
     <table class="tabla">

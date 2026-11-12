@@ -88,6 +88,13 @@ GRUPOS = {
         *_todos("juntas", "puntoorden"),
         "juntas.view_citacion",
         "juntas.add_citacion",
+        "juntas.view_celebracion",
+        "juntas.add_celebracion",
+        "juntas.change_celebracion",
+        "juntas.view_asistente",
+        "juntas.view_votoemitido",
+        "juntas.add_votoemitido",
+        "juntas.view_discrepancia",
     ],
     "Empleado del despacho": [
         "fincas.view_comunidad",

@@ -1,0 +1,37 @@
+{% autoescape off %}BORRADOR DEL ACTA DE LA JUNTA {{ junta.get_tipo_display|upper }} DE PROPIETARIOS
+{{ junta.comunidad.nombre|upper }}{% if junta.comunidad.direccion %} · {{ junta.comunidad.direccion }}{% endif %}
+
+En {{ junta.lugar }}, el {{ celebracion.iniciada_en|date:"j \d\e F \d\e Y" }}, a las {{ celebracion.iniciada_en|date:"H:i" }}, se reúne en {{ celebracion.get_convocatoria_display|lower }} convocatoria la junta {{ junta.get_tipo_display|lower }} de propietarios, convocada por {{ junta.convoca }} con fecha {{ junta.convocada_el|date:"j/n/Y" }}.
+
+Preside: {{ celebracion.presidente }}. Secretario: {{ celebracion.secretario }}.
+
+ASISTENTES
+{% for a in presentes %}- {{ a.propietario.nombre }} ({{ a.cuota|floatformat:"-4" }} %), presente.
+{% endfor %}{% for a in representados %}- {{ a.propietario.nombre }} ({{ a.cuota|floatformat:"-4" }} %), representado por {{ a.representante }}.
+{% endfor %}{% if not presentes and not representados %}- Ninguno.
+{% endif %}
+AUSENTES
+{% for a in ausentes %}- {{ a.propietario.nombre }} ({{ a.cuota|floatformat:"-4" }} %).
+{% empty %}- Ninguno.
+{% endfor %}{% if privados %}
+PROPIETARIOS PRIVADOS DEL DERECHO DE VOTO (art. 15.2 LPH)
+No están al corriente en el pago de las deudas vencidas con la comunidad: pueden deliberar, pero su persona y su cuota no se computan para las mayorías.
+{% for a in privados %}- {{ a.propietario.nombre }} ({{ a.cuota|floatformat:"-4" }} %).
+{% endfor %}{% endif %}
+ORDEN DEL DÍA Y ACUERDOS
+{% for punto, r in puntos %}
+{{ punto.orden }}. {{ punto.titulo }}
+{% if r is None %}   Se trata sin votación.
+{% else %}   Mayoría necesaria: {{ punto.get_mayoria_display }}.
+   A favor: {{ r.favor.propietarios }} propietarios ({{ r.favor.cuotas|floatformat:"-4" }} %). En contra: {{ r.contra.propietarios }} ({{ r.contra.cuotas|floatformat:"-4" }} %). Abstenciones: {{ r.abstencion.propietarios }} ({{ r.abstencion.cuotas|floatformat:"-4" }} %). Ausentes: {{ r.ausentes.propietarios }} ({{ r.ausentes.cuotas|floatformat:"-4" }} %).{% if r.ausentes_a_favor.propietarios %}
+   Ausentes que no han manifestado su discrepancia, computados a favor (R-MAY-05): {{ r.ausentes_a_favor.propietarios }} ({{ r.ausentes_a_favor.cuotas|floatformat:"-4" }} %).{% endif %}
+   {{ r.explicacion }}
+{% endif %}{% endfor %}
+{% if celebracion.esta_cerrada %}Acta cerrada el {{ celebracion.cerrada_en|date:"j/n/Y H:i" }}.{% else %}Borrador generado el {{ hoy|date:"j/n/Y" }}: el acta no está cerrada.{% endif %}
+
+El presidente,                         El secretario,
+
+
+
+{{ celebracion.presidente }}                  {{ celebracion.secretario }}
+{% endautoescape %}

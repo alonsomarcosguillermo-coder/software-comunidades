@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Citacion, Junta, PuntoOrden
+from .models import Asistente, Celebracion, Citacion, Junta, PuntoOrden
 
 # Nota (ADR 002): el admin de Django NO filtra por despacho. Es solo para el superusuario.
 # Las juntas se preparan y convocan desde la web; una vez convocadas, el modelo impide
@@ -39,3 +39,34 @@ class JuntaAdmin(admin.ModelAdmin):
         if obj is not None and obj.esta_convocada:
             return False
         return super().has_delete_permission(request, obj)
+
+
+# --- T4.3 ---------------------------------------------------------------------------------
+
+
+class AsistenteInline(admin.TabularInline):
+    model = Asistente
+    fields = ["propietario", "cuota", "asistencia", "representante", "deuda", "deuda_impugnada"]
+    readonly_fields = fields
+    extra = 0
+    can_delete = False
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(Celebracion)
+class CelebracionAdmin(admin.ModelAdmin):
+    """Solo lectura: se celebra desde la web (los votos dependen de R-VOT-01 y del acta)."""
+
+    list_display = ["junta", "iniciada_en", "convocatoria", "cerrada_en"]
+    inlines = [AsistenteInline]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

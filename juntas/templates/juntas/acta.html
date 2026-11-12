@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block titulo %}Acta · {{ comunidad.nombre }}{% endblock %}
+
+{% block contenido %}
+<p class="migas"><a href="{% url 'fincas:lista_comunidades' %}">Comunidades</a> ›
+  <a href="{% url 'cobros:presupuestos_comunidad' comunidad.pk %}">{{ comunidad.nombre }}</a> ›
+  <a href="{% url 'juntas:juntas_comunidad' comunidad.pk %}">Juntas</a> ›
+  <a href="{% url 'juntas:celebracion' comunidad.pk junta.pk %}">Celebración</a> › Acta</p>
+<div class="titulo-seccion">
+  <h1>Borrador del acta</h1>
+  <a href="{% url 'juntas:acta_junta' comunidad.pk junta.pk %}?descargar=1">Descargar (.txt)</a>
+</div>
+<p class="vacio">Borrador para revisar: el acta oficial se transcribe al libro de actas y la
+  firman el presidente y el secretario (art. 19 LPH).</p>
+<section class="tarjeta"><pre class="convocatoria">{{ texto }}</pre></section>
+{% endblock %}

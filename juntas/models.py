@@ -154,9 +154,151 @@ class Citacion(models.Model):
         return f"Citación de {self.propietario} a {self.junta}"
 
 
+# --- T4.3: celebración, asistencia y votos --------------------------------------------------
+
+
+class ActaCerrada(ValidationError):
+    def __init__(self):
+        super().__init__(
+            "El acta está cerrada: la asistencia y los votos ya no se cambian.",
+            code="acta_cerrada",
+        )
+
+
+class Celebracion(models.Model):
+    """La junta celebrada: cuándo empezó, en qué convocatoria (R-JUN-03) y quién la presidió.
+
+    Se crea con `juntas.celebracion.iniciar_junta`. Mientras el acta no esté cerrada se pueden
+    registrar votos; al cerrarla (art. 19 LPH: firma del presidente y el secretario) quedan
+    fijos. La notificación a los ausentes y sus discrepancias (R-MAY-05) llegan después.
+    """
+
+    junta = models.OneToOneField(Junta, on_delete=models.PROTECT, related_name="celebracion")
+    iniciada_en = models.DateTimeField("inicio")
+    convocatoria = models.PositiveSmallIntegerField(choices=[(1, "Primera"), (2, "Segunda")])
+    presidente = models.CharField(max_length=200)
+    secretario = models.CharField(max_length=200)
+    cerrada_en = models.DateTimeField("acta cerrada", null=True, blank=True)
+    # R-MAY-05: día en que se notificaron los acuerdos a los ausentes (art. 9 LPH).
+    ausentes_notificados_el = models.DateField(
+        "acuerdos notificados a los ausentes", null=True, blank=True
+    )
+
+    class Meta:
+        verbose_name = "celebración de junta"
+        verbose_name_plural = "celebraciones de juntas"
+
+    def __str__(self) -> str:
+        return f"Celebración de {self.junta}"
+
+    @property
+    def esta_cerrada(self) -> bool:
+        return self.cerrada_en is not None
+
+    @property
+    def es_segunda(self) -> bool:
+        return self.convocatoria == 2
+
+
+class Asistente(models.Model):
+    """Un votante en la junta: un propietario con las cuotas de los inmuebles que representa.
+
+    R-VOT-01: la deuda vencida se fija al iniciar la junta. Si la ha impugnado judicialmente
+    o consignado, recupera el voto (art. 15.2 LPH).
+    """
+
+    class Asistencia(models.TextChoices):
+        PRESENTE = "presente", "Presente"
+        REPRESENTADO = "representado", "Representado"
+        AUSENTE = "ausente", "Ausente"
+
+    celebracion = models.ForeignKey(
+        Celebracion, on_delete=models.CASCADE, related_name="asistentes"
+    )
+    propietario = models.ForeignKey(Propietario, on_delete=models.PROTECT, related_name="+")
+    cuota = models.DecimalField("cuota (%)", max_digits=7, decimal_places=4)
+    asistencia = models.CharField(max_length=12, choices=Asistencia.choices)
+    # Art. 15.1 LPH: quien le representa (con escrito firmado).
+    representante = models.CharField(max_length=200, blank=True)
+    # R-VOT-01: deuda vencida e impagada al iniciarse la junta.
+    deuda = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    deuda_impugnada = models.BooleanField("deuda impugnada o consignada", default=False)
+
+    class Meta:
+        verbose_name = "asistente"
+        verbose_name_plural = "asistentes"
+        ordering = ["celebracion", "propietario__nombre"]
+        constraints = [
+            models.UniqueConstraint(fields=["celebracion", "propietario"], name="asistente_unico"),
+            models.CheckConstraint(
+                condition=~Q(asistencia="representado") | ~Q(representante=""),
+                name="representado_con_representante",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.propietario} ({self.get_asistencia_display().lower()})"
+
+    @property
+    def asiste(self) -> bool:
+        return self.asistencia != self.Asistencia.AUSENTE
+
+    @property
+    def privado_de_voto(self) -> bool:
+        """R-VOT-01 (art. 15.2 LPH)."""
+        return self.deuda > 0 and not self.deuda_impugnada
+
+
+class VotoEmitido(models.Model):
+    """El sentido del voto de un asistente (presente o representado) en un punto."""
+
+    class Sentido(models.TextChoices):
+        FAVOR = "favor", "A favor"
+        CONTRA = "contra", "En contra"
+        ABSTENCION = "abstencion", "Abstención"
+
+    punto = models.ForeignKey(PuntoOrden, on_delete=models.PROTECT, related_name="votos")
+    asistente = models.ForeignKey(Asistente, on_delete=models.CASCADE, related_name="votos")
+    sentido = models.CharField(max_length=10, choices=Sentido.choices)
+
+    class Meta:
+        verbose_name = "voto"
+        verbose_name_plural = "votos"
+        constraints = [
+            models.UniqueConstraint(fields=["punto", "asistente"], name="un_voto_por_punto"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.asistente.propietario}: {self.get_sentido_display()} ({self.punto})"
+
+
+class Discrepancia(models.Model):
+    """R-MAY-05: un ausente comunica que no está de acuerdo, dentro de los 30 días."""
+
+    punto = models.ForeignKey(PuntoOrden, on_delete=models.PROTECT, related_name="discrepancias")
+    asistente = models.ForeignKey(Asistente, on_delete=models.CASCADE, related_name="discrepancias")
+    fecha = models.DateField()
+
+    class Meta:
+        verbose_name = "discrepancia de un ausente"
+        verbose_name_plural = "discrepancias de ausentes"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["punto", "asistente"], name="una_discrepancia_por_punto"
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"Discrepancia de {self.asistente.propietario} ({self.punto})"
+
+
 # Camino desde cada modelo hasta su despacho (ver core.aislamiento y ADR 002).
 CAMPO_DESPACHO = {
     Junta: "comunidad__despacho",
     PuntoOrden: "junta__comunidad__despacho",
     Citacion: "junta__comunidad__despacho",
+    Celebracion: "junta__comunidad__despacho",
+    Asistente: "celebracion__junta__comunidad__despacho",
+    VotoEmitido: "asistente__celebracion__junta__comunidad__despacho",
+    Discrepancia: "asistente__celebracion__junta__comunidad__despacho",
 }

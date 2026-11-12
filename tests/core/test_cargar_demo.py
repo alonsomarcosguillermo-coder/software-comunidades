@@ -311,3 +311,6 @@ def test_permisos_de_juntas(demo):
     assert admin.has_perm("juntas.add_citacion")
     assert empleado.has_perm("juntas.view_junta")
     assert not empleado.has_perm("juntas.add_citacion")
+    assert admin.has_perm("juntas.add_celebracion")  # T4.3
+    assert admin.has_perm("juntas.add_votoemitido")
+    assert not empleado.has_perm("juntas.add_votoemitido")
