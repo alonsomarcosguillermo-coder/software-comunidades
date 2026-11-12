@@ -18,12 +18,18 @@ from .morosidad import EstadoDeuda, InformeMorosos, ReciboDeuda, estado_deuda, i
 
 
 def recibos_deuda(recibos: QuerySet[Recibo]) -> list[ReciboDeuda]:
-    """Convierte recibos de la base de datos en `ReciboDeuda` (una sola consulta).
+    """Convierte recibos de la base de datos en `ReciboDeuda` (dos consultas).
 
-    T3.3 — Cuando un recibo se devuelva, tendrá que dejar de contar como cobrado aquí.
+    T3.3 — Un recibo devuelto ya no tiene `cobro` (se borra al devolverlo), pero cada
+    `Devolucion` recuerda qué conciliación lo había cobrado: de ahí salen los periodos
+    "cobrado → devuelto", para calcular bien la deuda en fechas pasadas.
     """
-    filas = recibos.select_related("inmueble", "propietario").annotate(
-        fecha_cobro=F("cobro__conciliacion__movimiento__fecha_operacion")
+    filas = (
+        recibos.select_related("inmueble", "propietario")
+        .annotate(fecha_cobro=F("cobro__conciliacion__movimiento__fecha_operacion"))
+        .prefetch_related(
+            "devoluciones__cobro__movimiento", "devoluciones__conciliacion__movimiento"
+        )
     )
     return [
         ReciboDeuda(
@@ -38,6 +44,10 @@ def recibos_deuda(recibos: QuerySet[Recibo]) -> list[ReciboDeuda]:
             vencimiento=r.vencimiento,
             fecha_cobro=r.fecha_cobro,
             remesado=r.remesa_id is not None,
+            devoluciones=tuple(
+                (d.cobro.movimiento.fecha_operacion, d.conciliacion.movimiento.fecha_operacion)
+                for d in r.devoluciones.all()
+            ),
         )
         for r in filas
     ]

@@ -22,8 +22,10 @@ from .conciliacion import (
     conciliar_automaticamente,
     conciliar_con_cuenta,
     conciliar_con_recibos,
+    conciliar_devolucion,
     deshacer_conciliacion,
     movimientos_pendientes,
+    recibos_cobrados,
     recibos_pendientes,
 )
 from .importacion import ImportacionInvalida, importar_norma43
@@ -123,7 +125,7 @@ class DetalleExtracto(FiltradoPorDespachoMixin, DetailView):
         # T3.2: con su conciliación (si la tiene) y lo que paga, sin una consulta por fila.
         movimientos = self.object.movimientos.select_related(
             "conciliacion__asiento", "conciliacion__cuenta", "conciliacion__remesa"
-        ).prefetch_related("conciliacion__cobros__recibo")
+        ).prefetch_related("conciliacion__cobros__recibo", "conciliacion__devoluciones__recibo")
         usuario = self.request.user
         return super().get_context_data(
             movimientos=movimientos,
@@ -189,10 +191,12 @@ class ConciliarAutomaticamente(LoginRequiredMixin, PermissionRequiredMixin, View
 class FormularioRecibos(forms.Form):
     recibos = forms.ModelMultipleChoiceField(queryset=Recibo.objects.none())
 
-    def __init__(self, *args, comunidad: Comunidad, **kwargs):
+    def __init__(self, *args, comunidad: Comunidad, cobrados: bool = False, **kwargs):
         super().__init__(*args, **kwargs)
-        # Solo recibos pendientes de esta comunidad: un id ajeno no es una opción válida.
-        self.fields["recibos"].queryset = recibos_pendientes(comunidad)
+        # Solo recibos de esta comunidad (pendientes para cobrar; cobrados para una
+        # devolución, T3.3): un id ajeno no es una opción válida.
+        consulta = recibos_cobrados if cobrados else recibos_pendientes
+        self.fields["recibos"].queryset = consulta(comunidad)
 
 
 class FormularioCuenta(forms.Form):
@@ -204,8 +208,9 @@ class FormularioCuenta(forms.Form):
 
 
 class ConciliarMovimiento(LoginRequiredMixin, PermissionRequiredMixin, View):
-    """Conciliación manual de un movimiento: con los recibos que paga (abonos) o con otra
-    cuenta contable. GET muestra las opciones; POST concilia y vuelve al extracto."""
+    """Conciliación manual de un movimiento: con los recibos que paga (abonos), con los
+    recibos cobrados que devuelve (cargos, T3.3) o con otra cuenta contable. GET muestra las
+    opciones; POST concilia y vuelve al extracto."""
 
     permission_required = "bancos.add_conciliacion"
     template_name = "bancos/conciliar_movimiento.html"
@@ -216,13 +221,14 @@ class ConciliarMovimiento(LoginRequiredMixin, PermissionRequiredMixin, View):
             messages.info(request, "Ese movimiento ya está conciliado.")
             return _volver_al_extracto(movimiento)
         comunidad = movimiento.extracto.comunidad
-        recibos = []
-        if movimiento.importe > 0:
-            # Primero los del importe exacto: son los candidatos más probables.
-            recibos = sorted(
-                recibos_pendientes(comunidad).select_related("propietario", "inmueble"),
-                key=lambda r: (r.importe != movimiento.importe, r.vencimiento, r.numero),
-            )
+        # Abono: recibos pendientes que puede pagar. Cargo: recibos cobrados que puede
+        # devolver. Primero los del importe exacto: son los candidatos más probables.
+        consulta = recibos_pendientes if movimiento.importe > 0 else recibos_cobrados
+        importe = abs(movimiento.importe)
+        recibos = sorted(
+            consulta(comunidad).select_related("propietario", "inmueble"),
+            key=lambda r: (r.importe != importe, r.vencimiento, r.numero),
+        )
         return render(
             request,
             self.template_name,
@@ -230,6 +236,7 @@ class ConciliarMovimiento(LoginRequiredMixin, PermissionRequiredMixin, View):
                 "comunidad": comunidad,
                 "movimiento": movimiento,
                 "recibos": recibos,
+                "importe": importe,
                 "cuentas": FormularioCuenta(comunidad=comunidad).fields["cuenta"].queryset,
             },
         )
@@ -244,6 +251,13 @@ class ConciliarMovimiento(LoginRequiredMixin, PermissionRequiredMixin, View):
                     raise ConciliacionInvalida("Elige una cuenta contable.")
                 conciliacion = conciliar_con_cuenta(
                     movimiento, formulario.cleaned_data["cuenta"], usuario=request.user
+                )
+            elif request.POST.get("accion") == "devolucion":
+                formulario = FormularioRecibos(request.POST, comunidad=comunidad, cobrados=True)
+                if not formulario.is_valid():
+                    raise ConciliacionInvalida("Elige al menos un recibo cobrado.")
+                conciliacion = conciliar_devolucion(
+                    movimiento, formulario.cleaned_data["recibos"], usuario=request.user
                 )
             else:
                 formulario = FormularioRecibos(request.POST, comunidad=comunidad)
@@ -272,9 +286,14 @@ class DeshacerConciliacion(LoginRequiredMixin, PermissionRequiredMixin, View):
             messages.info(request, "Ese movimiento no estaba conciliado.")
         else:
             numero = conciliacion.asiento.numero
-            deshacer_conciliacion(conciliacion, timezone.localdate())
-            messages.success(
-                request,
-                f"Conciliación deshecha: el asiento {numero} queda anulado con un contra-asiento.",
-            )
+            try:
+                deshacer_conciliacion(conciliacion, timezone.localdate())
+            except ConciliacionInvalida as error:  # T3.3: p. ej. un cobro con devoluciones
+                messages.error(request, str(error))
+            else:
+                messages.success(
+                    request,
+                    f"Conciliación deshecha: el asiento {numero} queda anulado con un "
+                    "contra-asiento.",
+                )
         return _volver_al_extracto(movimiento)

@@ -96,6 +96,32 @@ def proponer_conciliaciones(
         candidatas = _candidatas(movimiento, recibos, remesas)
         if len(candidatas) == 1:  # con dos formas de encajar, es ambiguo
             propuestas.append(candidatas[0])
+    return _sin_recibos_repetidos(propuestas)
+
+
+def _sin_recibos_repetidos(propuestas: list[Propuesta]) -> list[Propuesta]:
     # Un recibo reclamado por dos movimientos: ninguno de los dos se concilia solo.
     usos = Counter(r for p in propuestas for r in p.recibos)
     return [p for p in propuestas if all(usos[r] == 1 for r in p.recibos)]
+
+
+def proponer_devoluciones(
+    movimientos: list[MovimientoPendiente], cobrados: list[ReciboPendiente]
+) -> list[Propuesta]:
+    """T3.3 — Cargos que devuelven recibos ya cobrados (ADR 011).
+
+    Mismo criterio que los cobros, con el signo al revés: el cargo menciona las referencias
+    de recibos cobrados y su importe (en positivo) es exactamente su suma. Sin dudas o nada.
+    `cobrados` deben ser solo los recibos que ahora mismo están cobrados.
+    """
+    propuestas = []
+    for movimiento in movimientos:
+        if movimiento.importe >= 0:
+            continue  # una devolución saca dinero de la cuenta: es un cargo
+        texto = "\n".join(movimiento.textos)
+        mencionados = [r for r in cobrados if contiene_referencia(texto, r.referencia)]
+        if mencionados and sum((r.importe for r in mencionados), CERO) == -movimiento.importe:
+            propuestas.append(
+                Propuesta(movimiento=movimiento.id, recibos=tuple(r.id for r in mencionados))
+            )
+    return _sin_recibos_repetidos(propuestas)

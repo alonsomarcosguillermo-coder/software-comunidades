@@ -3,7 +3,8 @@
 Interpretación aplicada (ver `docs/DOMINIO.md`, pendiente de validar):
 - Un recibo está **impagado** en una fecha si no se había cobrado en ella. Cobrado = un
   movimiento del banco conciliado lo paga (T3.2), y cuenta la fecha de ese movimiento.
-  Las devoluciones (T3.3) harán que un recibo cobrado vuelva a estar impagado.
+  Si el banco devuelve el cobro (T3.3), el recibo vuelve a estar impagado desde la fecha
+  del cargo de la devolución (entre el cobro y la devolución estuvo pagado).
 - Está **vencido** si su vencimiento es anterior a la fecha: el mismo día del vencimiento
   todavía se puede pagar.
 - **Deuda** = recibos impagados y vencidos. **Moroso** = propietario con deuda (SPEC.md).
@@ -37,9 +38,18 @@ class ReciboDeuda:
     vencimiento: date
     fecha_cobro: date | None = None  # fecha del movimiento que lo pagó; None = sin cobrar
     remesado: bool = False  # enviado al banco en una remesa (puede estar pendiente de cobro)
+    # T3.3 — Cobros que el banco devolvió: (fecha del cobro, fecha de la devolución). Entre
+    # una y otra el recibo estuvo pagado; desde la devolución vuelve a ser deuda.
+    devoluciones: tuple[tuple[date, date], ...] = ()
 
     def impagado_en(self, fecha: date) -> bool:
-        return self.fecha_cobro is None or self.fecha_cobro > fecha
+        if self.fecha_cobro is not None and self.fecha_cobro <= fecha:
+            return False
+        return not any(cobro <= fecha < devuelto for cobro, devuelto in self.devoluciones)
+
+    def devuelto_en(self, fecha: date) -> bool:
+        """Impagado en `fecha` después de que el banco devolviera algún cobro suyo."""
+        return self.impagado_en(fecha) and any(d <= fecha for _, d in self.devoluciones)
 
     def vencido_en(self, fecha: date) -> bool:
         return self.vencimiento < fecha

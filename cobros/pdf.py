@@ -124,7 +124,9 @@ def _generado() -> str:
     return f"Generado el {timezone.localtime():%d/%m/%Y %H:%M}"
 
 
-def _estado_recibo(recibo: ReciboDeuda) -> str:
+def _estado_recibo(recibo: ReciboDeuda, fecha: date) -> str:
+    if recibo.devuelto_en(fecha):  # T3.3: el banco devolvió el cobro
+        return "Devuelto"
     # Un recibo remesado puede estar pendiente de que el banco lo cobre: se avisa.
     return "Remesado, sin cobro" if recibo.remesado else "Pendiente"
 
@@ -176,7 +178,7 @@ def pdf_informe_morosos(
                         r.referencia,
                         r.concepto,
                         formato_fecha(r.vencimiento),
-                        _estado_recibo(r),
+                        _estado_recibo(r, informe.fecha),
                         _importe(r.importe),
                     ]
                     for m in informe.morosos

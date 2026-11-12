@@ -138,10 +138,10 @@ def importar(comunidad, *movimientos, desde=date(2026, 1, 1), hasta=date(2026, 1
     return list(guardado.movimientos.order_by("orden"))
 
 
-def abono(importe, *textos, referencia="", dia=20):
+def abono(importe, *textos, referencia="", dia=20, mes=1):
     return Movimiento(
-        fecha_operacion=date(2026, 1, dia),
-        fecha_valor=date(2026, 1, dia),
+        fecha_operacion=date(2026, mes, dia),
+        fecha_valor=date(2026, mes, dia),
         concepto_comun="04",
         importe=Decimal(importe),
         referencia_1=referencia,
@@ -149,10 +149,10 @@ def abono(importe, *textos, referencia="", dia=20):
     )
 
 
-def cargo(importe, *textos, dia=25):
+def cargo(importe, *textos, dia=25, mes=1):
     return Movimiento(
-        fecha_operacion=date(2026, 1, dia),
-        fecha_valor=date(2026, 1, dia),
+        fecha_operacion=date(2026, mes, dia),
+        fecha_valor=date(2026, mes, dia),
         concepto_comun="03",
         importe=-Decimal(importe),
         conceptos=textos,

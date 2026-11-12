@@ -120,7 +120,16 @@ tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizad
   movimiento, página de conciliación manual (recibos del importe exacto primero, o cuenta).
   Admin de solo lectura. `cargar_demo`: permisos y cuenta 626; el extracto se deja sin
   conciliar para probarlo. ADR 010.
-- ⬜ **T3.3** 🔀 Devoluciones de recibos → deuda del propietario.
+- ✅ **T3.3** 🔀 Devoluciones de recibos → deuda del propietario.
+  Hecho: `bancos.Devolucion` (recibo + conciliación del cargo + conciliación del cobro que
+  deshace). `bancos.conciliacion.conciliar_devolucion`: solo recibos cobrados, importe exacto,
+  asiento 430 / 572 por recibo, y borra el `CobroRecibo`: el recibo vuelve a estar sin cobrar
+  (deuda, misma consulta `cobro__isnull=True`) y se puede volver a cobrar. Estado
+  `Recibo.estado == "devuelto"`. Automática (pura, `proponer_devoluciones`, hypothesis): cargos
+  con la referencia de recibos cobrados e importe exacto, después de los cobros. Deshacer: un
+  cobro con devoluciones no se deshace; deshacer la devolución restaura el cobro (salvo que el
+  recibo se haya vuelto a cobrar). Web: la página manual de un cargo ofrece los recibos
+  cobrados; detalle y página de recibos muestran las devoluciones. Admin. ADR 011.
 - ✅ **T3.4** 🔀 Informe de morosos y certificado de deuda `R-DEU-01` (PDF).
   Hecho: la deuda se calcula a una fecha, no se guarda. Cálculo puro `cobros.morosidad`
   (`ReciboDeuda` → `informe_morosos` por propietario y `estado_deuda` por inmueble; vencido =
@@ -131,8 +140,8 @@ tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizad
   detalle de recibos y certificado R-DEU-01 por inmueble (deuda vencida, también de
   titulares anteriores, y recibos por vencer aparte; firma en blanco). Página
   `/comunidades/<id>/morosos/?fecha=` con enlaces a los dos PDF (`cobros.view_recibo`; fecha
-  futura no admitida). ADR 012. Al fusionar con T3.3: un recibo devuelto debe contar como no
-  cobrado en `cobros.deudas.recibos_deuda`.
+  futura no admitida). Con T3.3: un recibo devuelto es deuda desde la fecha del cargo de
+  la devolución (los periodos "cobrado → devuelto" cuentan como pagados). ADR 012.
 
 ## Fase 4 — Juntas
 - ⬜ **T4.1** Convocatoria (orden del día, plazos `R-JUN-02`, envío por email).
@@ -206,8 +215,12 @@ tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizad
   menos sigue debiendo todo el recibo). La página manual lista todos los recibos
   pendientes sin paginar ni buscar; tampoco suma en vivo los marcados.
 - Conciliación: no propone por importe + nombre del ordenante cuando falta la referencia.
-- Conciliación: `CobroRecibo.recibo` es único; T3.3 (devoluciones) debe permitir volver a
-  cobrar un recibo devuelto.
+- Devoluciones: un recibo devuelto no se puede volver a presentar en otra remesa (solo
+  cobrarlo por otro medio). Tampoco se guarda el motivo SEPA (AM04, MD06...) aparte.
+- Pregunta pendiente para `DOMINIO.md`: ¿se pueden repercutir al propietario los gastos
+  bancarios de la devolución (estatutos, acuerdo de junta)? Hoy los paga la comunidad.
+- `cargar_demo` no tiene remesa ni devolución de ejemplo (para verlo en la web hay que crear
+  una remesa e importar un extracto con su abono y su devolución).
 - Conciliación: al deshacer se borra la fila de `Conciliacion`; el rastro queda solo en los
   asientos (original y contra-asiento), no en quién concilió y quién deshizo.
 - Morosidad: no hay registro de certificados de deuda emitidos (número, fecha, solicitante);

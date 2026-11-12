@@ -52,6 +52,8 @@
             <td>
               {% if recibo.esta_cobrado %}
                 <span class="estado ok">Cobrado</span>
+              {% elif recibo.esta_devuelto %}
+                <span class="estado mal">Devuelto</span>
               {% elif recibo.remesa %}
                 <span class="estado ok">Remesa {{ recibo.remesa.numero }} ({{ recibo.secuencia }})</span>
               {% else %}

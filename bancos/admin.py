@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import CobroRecibo, Conciliacion, Extracto, Movimiento
+from .models import CobroRecibo, Conciliacion, Devolucion, Extracto, Movimiento
 
 # Nota (ADR 002): el admin de Django NO filtra por despacho. Es solo para el superusuario.
 # Los extractos se importan desde la página de extractos de la comunidad y son inmutables.
@@ -37,10 +37,19 @@ class CobroReciboInline(SoloLecturaMixin, admin.TabularInline):
     extra = 0
 
 
+class DevolucionInline(SoloLecturaMixin, admin.TabularInline):
+    """T3.3: recibos que devuelve el cargo conciliado, y el cobro que deshacen."""
+
+    model = Devolucion
+    fk_name = "conciliacion"
+    fields = ["recibo", "cobro"]
+    extra = 0
+
+
 @admin.register(Conciliacion)
 class ConciliacionAdmin(SoloLecturaMixin, admin.ModelAdmin):
     """Solo lectura: se concilia y se deshace desde el extracto (con su contra-asiento)."""
 
     list_display = ["movimiento", "asiento", "remesa", "cuenta", "automatica", "creada_en"]
     list_filter = ["automatica", "movimiento__extracto__comunidad"]
-    inlines = [CobroReciboInline]
+    inlines = [CobroReciboInline, DevolucionInline]

@@ -56,6 +56,29 @@ def test_recibo_cobrado_despues_de_la_fecha_era_deuda_en_esa_fecha():
     assert recibos_impagados([cobrado_tarde], HOY) == [cobrado_tarde]
 
 
+def test_recibo_devuelto_es_deuda_desde_la_devolucion():
+    """T3.3: cobrado el 20/1 y devuelto el 5/2 → pagado entre esas fechas, deuda después."""
+    devuelto = ReciboDeuda(
+        **{**recibo(1).__dict__, "devoluciones": ((date(2026, 1, 20), date(2026, 2, 5)),)}
+    )
+    assert recibos_impagados([devuelto], date(2026, 1, 19)) == [devuelto]
+    assert recibos_impagados([devuelto], date(2026, 2, 1)) == []
+    assert recibos_impagados([devuelto], date(2026, 2, 5)) == [devuelto]
+    assert devuelto.devuelto_en(date(2026, 2, 5))
+    assert not devuelto.devuelto_en(date(2026, 1, 19))
+
+
+def test_recibo_devuelto_y_cobrado_otra_vez_no_es_deuda():
+    recobrado = ReciboDeuda(
+        **{
+            **recibo(1, cobro=date(2026, 3, 1)).__dict__,
+            "devoluciones": ((date(2026, 1, 20), date(2026, 2, 5)),),
+        }
+    )
+    assert recibos_impagados([recobrado], date(2026, 2, 20)) == [recobrado]
+    assert recibos_impagados([recobrado], date(2026, 3, 1)) == []
+
+
 def test_recibo_que_vence_ese_dia_aun_no_esta_vencido():
     """El día del vencimiento todavía se puede pagar: vence, pero no está vencido."""
     estado = estado_deuda([recibo(1, vencimiento=HOY)], HOY)

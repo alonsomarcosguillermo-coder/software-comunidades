@@ -30,8 +30,9 @@ con qué generar los PDF.
 ## Consecuencias
 - Un recibo remesado cuyo extracto no se ha conciliado todavía sale como deuda (marcado como
   "remesado"). Es lo prudente, pero obliga a conciliar antes de certificar.
-- Cuando llegue T3.3, un recibo devuelto tendrá que contar como no cobrado en
-  `cobros.deudas.recibos_deuda` (hay un comentario en ese punto).
+- Con las devoluciones (T3.3, ADR 011) el `CobroRecibo` se borra, pero cada `Devolucion`
+  guarda el cobro que deshizo: el recibo cuenta como pagado entre la fecha del cobro y la del
+  cargo de la devolución, y como deuda desde entonces. Así las fechas pasadas salen bien.
 - No queda registro de los certificados emitidos (número, fecha, quién lo pidió). Si hace
   falta, se añadirá un modelo que guarde el PDF, como `Remesa` guarda su XML.
 - El certificado deja en blanco la firma y el cargo: quién firma está pendiente de validar.

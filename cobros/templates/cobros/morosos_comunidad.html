@@ -35,7 +35,7 @@
             <td>{{ moroso.inmuebles|join:", " }}</td>
             <td>
               {% for recibo in moroso.recibos %}
-                {{ recibo.referencia }} ({{ recibo.vencimiento|date:"j/n/Y" }}, {{ recibo.importe }} €{% if recibo.remesado %}, remesado{% endif %}){% if not forloop.last %}<br>{% endif %}
+                {{ recibo.referencia }} ({{ recibo.vencimiento|date:"j/n/Y" }}, {{ recibo.importe }} €{% if recibo.devoluciones %}, devuelto{% elif recibo.remesado %}, remesado{% endif %}){% if not forloop.last %}<br>{% endif %}
               {% endfor %}
             </td>
             <td>{{ moroso.mas_antiguo|date:"j/n/Y" }}</td>

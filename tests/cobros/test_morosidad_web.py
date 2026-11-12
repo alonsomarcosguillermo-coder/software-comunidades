@@ -14,14 +14,21 @@ from django.contrib.auth.models import Permission
 from django.urls import reverse
 from django.utils import timezone
 
-from bancos.conciliacion import conciliar_con_recibos
+from bancos.conciliacion import conciliar_con_recibos, conciliar_devolucion
 from cobros.deudas import certificado_deuda_de, informe_morosos_de
 from cobros.pdf import formato_euros, pdf_certificado_deuda, pdf_informe_morosos
 from fincas.models import Inmueble, Propietario, Titularidad
 
 # Comunidad con el 1er trimestre de 2026 emitido: recibos de 1A (300 €), 1B (300 €) y
 # L1 (400 €) que vencen el 5/1/2026. Ver tests/bancos/conftest.py.
-from tests.bancos.conftest import abono, comunidad, con_recibos, importar, recibo_de  # noqa: F401
+from tests.bancos.conftest import (  # noqa: F401
+    abono,
+    cargo,
+    comunidad,
+    con_recibos,
+    importar,
+    recibo_de,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -48,6 +55,24 @@ def test_informe_morosos_usa_la_fecha_del_cobro_conciliado(con_un_cobro):
         ("Vecino 3", D("400.00")),
         ("Vecino 2", D("300.00")),
     ]
+
+
+def test_recibo_devuelto_vuelve_a_ser_deuda_desde_la_devolucion(con_un_cobro):
+    """T3.3: el cobro de 1A (20/1) se devuelve el 10/2. A 1/2 estaba pagado; a 15/2 se debe."""
+    [cargo_devolucion] = importar(
+        con_un_cobro,
+        cargo("300.00", "DEVOLUCION REC-1A", dia=10, mes=2),
+        desde=date(2026, 2, 1),
+        hasta=date(2026, 2, 28),
+    )
+    conciliar_devolucion(cargo_devolucion, [recibo_de(con_un_cobro, "1A")])
+    deudores = lambda fecha: [  # noqa: E731
+        m.propietario for m in informe_morosos_de(con_un_cobro, fecha).morosos
+    ]
+    assert "Vecino 1" not in deudores(date(2026, 2, 1))
+    assert "Vecino 1" in deudores(date(2026, 2, 15))
+    informe = informe_morosos_de(con_un_cobro, date(2026, 2, 15))
+    assert b"Devuelto" in pdf_informe_morosos(con_un_cobro, informe, comprimir=False)
 
 
 def test_informe_morosos_el_dia_del_vencimiento_aun_no_hay_morosos(con_recibos):  # noqa: F811
