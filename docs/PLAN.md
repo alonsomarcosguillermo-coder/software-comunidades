@@ -175,6 +175,26 @@ tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizad
 - ⬜ **T5.2** Votación online del vecino.
 - ⬜ **T5.3** GitHub + CI (GitHub Actions con PostgreSQL de servicio).
 
+## Fase 6 — Preparar el uso real
+- ⬜ **T6.1** Alta de comunidades por web: comunidad, inmuebles con coeficientes (R-COEF-01
+  al guardar), propietarios y titularidades, desde pantallas propias filtradas por despacho
+  (sin depender del admin de Django, que no filtra). Importación desde Excel/CSV (una fila
+  por inmueble y titular) con vista previa de errores antes de guardar.
+  Terminado: un empleado da de alta una comunidad completa sin entrar al admin; test de
+  aislamiento; un fichero con errores no guarda nada.
+- ⬜ **T6.2** Cargos de la comunidad: presidente, vicepresidente, secretario y vocales con
+  fechas (histórico por año). La junta propone el presidente vigente como "quien convoca" y
+  como presidente de la celebración. Antes, preguntar y documentar en `DOMINIO.md` las reglas
+  de los cargos (art. 13 LPH: designación, duración, turno rotatorio o sorteo).
+  Terminado: reglas con ID en DOMINIO.md y sus tests; convocatoria y acta usan los cargos.
+- ⬜ **T6.3** Despliegue: la aplicación en un servidor con dominio propio y HTTPS. Settings de
+  producción por variables de entorno (DEBUG off, SECRET_KEY, ALLOWED_HOSTS, cookies
+  seguras), servidor de aplicación (gunicorn) y estáticos, PostgreSQL gestionado con copias
+  de seguridad, correo real (SMTP) para las convocatorias, y despliegue automático desde
+  GitHub (depende de T5.3). ADR con la elección del proveedor y su coste.
+  Terminado: `manage.py check --deploy` sin avisos; la app accesible en su dominio; copia de
+  seguridad restaurada en una prueba.
+
 ## Ideas / deuda técnica
 - El admin de Django no filtra por despacho: si algún día lo usan empleados (no solo el
   superusuario), habrá que restringir sus querysets o retirarles el acceso. Comprobado con
