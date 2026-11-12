@@ -293,7 +293,14 @@ def notificar_ausentes(celebracion: Celebracion, fecha: date) -> None:
 
 
 @transaction.atomic
-def registrar_discrepancia(punto: PuntoOrden, asistente: Asistente, fecha: date) -> Discrepancia:
+def registrar_discrepancia(
+    punto: PuntoOrden,
+    asistente: Asistente,
+    fecha: date,
+    *,
+    canal: str = Discrepancia.Canal.DESPACHO,
+    recibida_en: datetime | None = None,
+) -> Discrepancia:
     """R-MAY-05: un ausente manifiesta su discrepancia, dentro de los 30 días naturales."""
     # Siempre de la base de datos: un objeto en caché podría no ver una notificación nueva.
     celebracion = Celebracion.objects.get(junta_id=punto.junta_id)
@@ -311,7 +318,9 @@ def registrar_discrepancia(punto: PuntoOrden, asistente: Asistente, fecha: date)
         )
     if Discrepancia.objects.filter(punto=punto, asistente=asistente).exists():
         raise CelebracionInvalida("Esa discrepancia ya está registrada.")
-    return Discrepancia.objects.create(punto=punto, asistente=asistente, fecha=fecha)
+    return Discrepancia.objects.create(
+        punto=punto, asistente=asistente, fecha=fecha, canal=canal, recibida_en=recibida_en
+    )
 
 
 def texto_acta(celebracion: Celebracion, hoy: date) -> str:

@@ -11,6 +11,50 @@
   <pre class="convocatoria">{{ convocatoria }}</pre>
 </section>
 
+{% if ausente %}
+  {# T5.2 — R-MAY-05 / art. 17.8 LPH: el ausente puede discrepar en 30 días naturales. #}
+  <section class="tarjeta">
+    <h2>No asististe a esta junta</h2>
+    {% if not ausente.notificados %}
+      <p class="vacio">Cuando el administrador te notifique los acuerdos, podrás decir aquí si
+        no estás de acuerdo con alguno.</p>
+    {% else %}
+      <p>Los acuerdos se notificaron el {{ ausente.notificados|date:"j/n/Y" }}.
+        {% if ausente.en_plazo %}Tienes hasta el <strong>{{ ausente.hasta|date:"j/n/Y" }}</strong> para comunicar que no estás de acuerdo.{% else %}El plazo para discrepar terminó el {{ ausente.hasta|date:"j/n/Y" }}.{% endif %}</p>
+      <p class="vacio">Si no dices nada en ese plazo, la ley cuenta tu voto como favorable a
+        cada acuerdo (art. 17.8 LPH). Aquí no se vota: solo puedes manifestar tu discrepancia.</p>
+      {% if acuerdos %}
+        <table class="tabla">
+          <thead><tr><th>Acuerdo</th><th>Resultado en la junta</th><th>Tu postura</th></tr></thead>
+          <tbody>
+            {% for punto, r, discrepancia in acuerdos %}
+              <tr>
+                <td>{{ punto.orden }}. {{ punto.titulo }}</td>
+                <td>{% if r.aprobado %}Aprobado{% else %}No aprobado{% endif %}{% if r.ausentes_a_favor.propietarios %} (con los ausentes){% endif %}</td>
+                <td>
+                  {% if discrepancia %}
+                    <span class="estado mal">No estás de acuerdo</span>
+                    {% if discrepancia.recibida_en %}<br><span class="vacio">Recibida el {{ discrepancia.recibida_en|date:"j/n/Y H:i" }}</span>{% endif %}
+                  {% elif ausente.en_plazo %}
+                    <form method="post" action="{% url 'portal:discrepar' junta.pk punto.pk %}">
+                      {% csrf_token %}
+                      <button type="submit">No estoy de acuerdo</button>
+                    </form>
+                  {% else %}
+                    <span class="vacio">Cuenta a favor</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p class="vacio">Ningún acuerdo de esta junta tiene en cuenta a los ausentes.</p>
+      {% endif %}
+    {% endif %}
+  </section>
+{% endif %}
+
 <section class="tarjeta">
   <h2>Acta</h2>
   {% if acta %}

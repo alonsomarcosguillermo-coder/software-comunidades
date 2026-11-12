@@ -1,0 +1,10 @@
+{% autoescape off %}Hola, {{ discrepancia.asistente.propietario.nombre }}:
+
+Hemos recibido tu discrepancia con este acuerdo de la junta {{ junta.get_tipo_display|lower }} del {{ junta.primera_convocatoria|date:"j/n/Y" }} de {{ junta.comunidad.nombre }}:
+
+  {{ punto.orden }}. {{ punto.titulo }}
+
+Recibida el {{ discrepancia.recibida_en|date:"j/n/Y \a \l\a\s H:i" }}.
+
+Por haberla comunicado dentro del plazo de 30 días naturales, tu voto no se contará a favor de ese acuerdo (art. 17.8 de la Ley de Propiedad Horizontal). Guarda este email como justificante.
+{% endautoescape %}

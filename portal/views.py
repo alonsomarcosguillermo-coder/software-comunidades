@@ -9,10 +9,11 @@ from django.views.generic import DetailView, TemplateView
 
 from core.aislamiento import FiltradoPorDespachoMixin, filtrar_por_despacho
 from fincas.models import CAMPO_DESPACHO, Comunidad, Propietario, Titularidad
-from juntas.celebracion import texto_acta
+from juntas.celebracion import CelebracionInvalida, resultado, texto_acta
 from juntas.convocatoria import texto_convocatoria
 
 from .consultas import es_vecino, juntas_de, recibos_de, resumen_de
+from .discrepancias import discrepar_online, estado_ausente, puntos_discrepables
 from .invitacion import InvitacionInvalida, invitar
 
 
@@ -78,12 +79,47 @@ class JuntaPortal(VecinoMixin, DetailView):
             for c in junta.citaciones.filter(moroso=True).select_related("propietario")
         ]
         celebracion = getattr(junta, "celebracion", None)
+        hoy = timezone.localdate()
         acta = None
         if celebracion is not None and celebracion.esta_cerrada:
-            acta = texto_acta(celebracion, timezone.localdate())
+            acta = texto_acta(celebracion, hoy)
+        # T5.2: si no fue a la junta, puede comunicar su discrepancia (R-MAY-05).
+        ausente = estado_ausente(self.request.user, junta, hoy) if celebracion else None
+        acuerdos = []
+        if ausente is not None and ausente.notificados is not None:
+            acuerdos = [
+                (punto, resultado(punto, hoy), ausente.discrepancias.get(punto.pk))
+                for punto in puntos_discrepables(junta)
+            ]
         return super().get_context_data(
-            convocatoria=texto_convocatoria(junta, morosos), acta=acta, **kwargs
+            convocatoria=texto_convocatoria(junta, morosos),
+            acta=acta,
+            ausente=ausente,
+            acuerdos=acuerdos,
+            **kwargs,
         )
+
+
+class DiscreparPortal(VecinoMixin, View):
+    """POST: el vecino ausente comunica su discrepancia con un acuerdo (R-MAY-05)."""
+
+    http_method_names = ["post"]
+
+    def post(self, request, pk, punto_pk):
+        junta = get_object_or_404(juntas_de(request.user, timezone.localdate()), pk=pk)
+        punto = get_object_or_404(junta.puntos, pk=punto_pk)
+        try:
+            discrepancia = discrepar_online(request.user, punto)
+        except CelebracionInvalida as error:
+            messages.error(request, str(error))
+        else:
+            hora = timezone.localtime(discrepancia.recibida_en)
+            messages.success(
+                request,
+                f"Discrepancia recibida el {hora:%d/%m/%Y a las %H:%M}. Te hemos enviado un "
+                "justificante por email.",
+            )
+        return redirect("portal:junta", pk=pk)
 
 
 # --- Para el despacho: dar acceso a los vecinos --------------------------------------------

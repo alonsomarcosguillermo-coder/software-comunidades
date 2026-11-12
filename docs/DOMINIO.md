@@ -55,8 +55,16 @@ Interpretación aplicada en T2.1 (pendiente de validar con un profesional):
 - **R-MAY-05** ⚠️ Los propietarios ausentes debidamente citados, a los que se notifique el acuerdo
   y no manifiesten su discrepancia en el plazo legal (30 días naturales), se computan como votos
   favorables (art. 17.8 LPH).
-- **R-JUN-04** ⚠️ Juntas y votaciones telemáticas: permitidas tras la reforma de 2022 bajo ciertas
-  condiciones. Requisitos exactos pendientes de documentar antes de la Fase 4.
+- **R-JUN-04** ⚠️ Juntas y votaciones telemáticas: el texto consolidado de la LPH (BOE,
+  actualizado el 03/10/2026; consultado el 12/11/2026) NO las regula. No contiene ninguna
+  mención a juntas telemáticas, videoconferencia, medios electrónicos ni voto anticipado o a
+  distancia. Solo prevé asistir en persona o representado con escrito firmado (art. 15.1),
+  votar en la junta, y que los ausentes comuniquen su discrepancia en 30 días naturales "por
+  cualquier medio que permita tener constancia de la recepción" (art. 17.8). Por eso el
+  sistema NO ofrece voto online con efectos legales. Cualquier participación telemática
+  necesitaría validación profesional (estatutos, jurisprudencia, normativa autonómica) y una
+  regla nueva aquí. (Antes ponía "permitidas tras la reforma de 2022": no se ha encontrado
+  esa reforma en el texto vigente.)
 
 Interpretación aplicada en T4.1 (texto consolidado de la LPH en el BOE, actualizado el
 03/10/2026; pendiente de validar con un profesional):
@@ -115,6 +123,26 @@ Interpretación aplicada en T4.3 (celebración y acta; pendiente de validar):
 - Acta (art. 19): borrador con fecha y lugar, convocatoria, presidente y secretario,
   asistentes con su cuota (y representantes), ausentes, privados de voto (art. 15.2) y
   acuerdos con sus votos. Pendiente de cotejar con el texto literal del art. 19.
+  Actualización (BOE consultado el 12/11/2026): el art. 19.2 pide como mínimo fecha y lugar,
+  autor de la convocatoria, si es ordinaria o extraordinaria y en 1ª o 2ª convocatoria,
+  todos los asistentes con sus cargos y los representados con su cuota, el orden del día y
+  los acuerdos con los nombres de quienes votan a favor y en contra (cuando importe para la
+  validez) y sus cuotas. El art. 19.3 exige cerrar el acta con las firmas del presidente y del
+  secretario al terminar o en los 10 días naturales siguientes. Falta en el borrador: los
+  nombres de quienes votan a favor y en contra.
+
+Interpretación aplicada en T5.2 (discrepancia online del ausente; pendiente de validar):
+- R-MAY-05 / art. 17.8: un ausente puede comunicar su discrepancia desde el portal del
+  vecino. Se entiende como "medio que permita tener constancia de la recepción": se guardan la
+  fecha y la hora en que se recibe y se envía un acuse por email al vecino. Pregunta:
+  ¿basta este registro como constancia, o hace falta además notificarlo al secretario?
+- Solo puede discrepar quien figura como votante ausente en la junta (en un inmueble con
+  cotitulares, el que lo representa), dentro de los 30 días naturales desde la notificación
+  de los acuerdos, y solo en los puntos que computan ausentes (en las excepciones del
+  art. 17.8 la discrepancia no cambia nada).
+- Un ausente privado de voto (R-VOT-01) puede comunicar su discrepancia, pero no cambia el
+  resultado: su cuota ya no cuenta para la mayoría.
+- No hay voto online (ver R-JUN-04).
 
 ## Morosidad
 - **R-DEU-01** ⚠️ En la venta de un inmueble, el vendedor debe aportar certificado de la comunidad

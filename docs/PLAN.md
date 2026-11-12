@@ -179,7 +179,12 @@ tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizad
   "Invitar al portal" (email con enlace para elegir contraseña, token de Django) y
   "¿Olvidaste tu contraseña?". `inicio` reparte despacho → comunidades, vecino → portal;
   menú según el rol. Demo: `vecina.marta`. ADR 016.
-- ⬜ **T5.2** Votación online del vecino.
+- ✅ **T5.2** ~~Votación online del vecino~~ → Discrepancia online del ausente (R-MAY-05).
+  Cambio de alcance decidido con el usuario: la LPH vigente no regula el voto a distancia
+  (BOE consultado; R-JUN-04 corregida). Hecho: en el portal, el ausente ve los acuerdos
+  notificados y el plazo de 30 días, y comunica "No estoy de acuerdo" en los puntos que
+  computan ausentes. `Discrepancia` guarda canal y hora de recepción; acuse por email como
+  justificante. `portal.discrepancias` sobre `registrar_discrepancia` (T4.3). ADR 017.
 - ⬜ **T5.3** GitHub + CI (GitHub Actions con PostgreSQL de servicio).
 
 ## Fase 6 — Preparar el uso real
@@ -289,3 +294,6 @@ tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizad
 - Juntas (T4.3): sin elegir en la web el representante de los cotitulares (el servicio lo
   admite); sin corregir la asistencia una vez iniciada; sin libro de actas, firma ni envío
   del acta. Revisar el borrador del acta contra el texto literal del art. 19 LPH.
+- Juntas: la notificación de los acuerdos a los ausentes se anota a mano; no se envía por
+  email desde la aplicación (y el aviso al vecino de que puede discrepar en el portal, tampoco).
+- Acta: el borrador no lista los nombres de quienes votan a favor y en contra (art. 19.2.f).

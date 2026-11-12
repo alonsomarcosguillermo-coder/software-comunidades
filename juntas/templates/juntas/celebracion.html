@@ -142,7 +142,7 @@
         {% endif %}
         {% if celebracion.ausentes_notificados_el and punto.computa_ausentes %}
           <h3>Ausentes que discrepan (R-MAY-05)</h3>
-          {% for d in discrepan %}<p>{{ d.asistente.propietario.nombre }}, el {{ d.fecha|date:"j/n/Y" }}</p>{% empty %}<p class="vacio">Ninguno por ahora.</p>{% endfor %}
+          {% for d in discrepan %}<p>{{ d.asistente.propietario.nombre }}, el {{ d.fecha|date:"j/n/Y" }} · {{ d.get_canal_display }}{% if d.recibida_en %} (recibida {{ d.recibida_en|date:"j/n/Y H:i" }}){% endif %}</p>{% empty %}<p class="vacio">Ninguno por ahora.</p>{% endfor %}
           {% if puede_discrepar and ausentes %}
             <form method="post" class="emitir" action="{% url 'juntas:registrar_discrepancia' comunidad.pk junta.pk punto.pk %}">
               {% csrf_token %}

@@ -275,9 +275,16 @@ class VotoEmitido(models.Model):
 class Discrepancia(models.Model):
     """R-MAY-05: un ausente comunica que no está de acuerdo, dentro de los 30 días."""
 
+    class Canal(models.TextChoices):
+        DESPACHO = "despacho", "Registrada por el despacho"
+        PORTAL = "portal", "Portal del vecino"
+
     punto = models.ForeignKey(PuntoOrden, on_delete=models.PROTECT, related_name="discrepancias")
     asistente = models.ForeignKey(Asistente, on_delete=models.CASCADE, related_name="discrepancias")
     fecha = models.DateField()
+    # T5.2 — Constancia de la recepción (art. 17.8 LPH): cuándo y por dónde llegó.
+    canal = models.CharField(max_length=10, choices=Canal.choices, default=Canal.DESPACHO)
+    recibida_en = models.DateTimeField("recibida", null=True, blank=True)
 
     class Meta:
         verbose_name = "discrepancia de un ausente"
