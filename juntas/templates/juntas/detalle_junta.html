@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block titulo %}Junta · {{ comunidad.nombre }}{% endblock %}
+
+{% block contenido %}
+<p class="migas"><a href="{% url 'fincas:lista_comunidades' %}">Comunidades</a> ›
+  <a href="{% url 'cobros:presupuestos_comunidad' comunidad.pk %}">{{ comunidad.nombre }}</a> ›
+  <a href="{% url 'juntas:juntas_comunidad' comunidad.pk %}">Juntas</a> ›
+  {{ junta.primera_convocatoria|date:"j/n/Y" }}</p>
+<div class="titulo-seccion">
+  <h1>Junta {{ junta.get_tipo_display|lower }} del {{ junta.primera_convocatoria|date:"j/n/Y" }}</h1>
+  {% if puede_editar %}<a href="{% url 'juntas:editar_junta' comunidad.pk junta.pk %}">Editar</a>{% endif %}
+</div>
+
+<section class="tarjeta">
+  <dl class="datos">
+    <dt>Primera convocatoria</dt><dd>{{ junta.primera_convocatoria|date:"j/n/Y H:i" }}</dd>
+    <dt>Segunda convocatoria</dt><dd>{{ junta.segunda_convocatoria|date:"j/n/Y H:i"|default:"—" }}</dd>
+    <dt>Lugar</dt><dd>{{ junta.lugar }}</dd>
+    <dt>Convoca</dt><dd>{{ junta.convoca }}</dd>
+    <dt>Estado</dt>
+    <dd>{% if junta.esta_convocada %}<span class="estado ok">Convocada el {{ junta.convocada_el|date:"j/n/Y" }}</span>{% else %}<span class="estado">Borrador</span>{% endif %}</dd>
+  </dl>
+</section>
+
+<section class="tarjeta">
+  <h2>Orden del día</h2>
+  {% if puntos %}
+    <table class="tabla">
+      <thead><tr><th>Nº</th><th>Asunto</th><th>Mayoría</th><th>Ausentes (R-MAY-05)</th></tr></thead>
+      <tbody>
+        {% for punto in puntos %}
+          <tr>
+            <td>{{ punto.orden }}</td>
+            <td>{{ punto.titulo }}{% if punto.descripcion %}<br><span class="vacio">{{ punto.descripcion }}</span>{% endif %}</td>
+            <td>{{ punto.get_mayoria_display }}</td>
+            <td>{% if punto.mayoria == "sin_votacion" %}—{% elif punto.computa_ausentes %}Se computan{% else %}No (art. 17.8){% endif %}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="vacio">Sin orden del día todavía.</p>
+  {% endif %}
+</section>
+
+{% if junta.esta_convocada %}
+  <section class="tarjeta">
+    <h2>Citaciones</h2>
+    <table class="tabla">
+      <thead><tr><th>Propietario</th><th>Email</th><th>Relación de morosos</th></tr></thead>
+      <tbody>
+        {% for citacion in citaciones %}
+          <tr>
+            <td>{{ citacion.propietario.nombre }}</td>
+            <td>{% if citacion.enviada_en %}<span class="estado ok">Enviado {{ citacion.enviada_en|date:"j/n/Y H:i" }}</span>{% else %}<span class="estado mal">Sin email: citar por otro medio</span>{% endif %}</td>
+            <td>{% if citacion.moroso %}<span class="estado mal">Sí</span>{% else %}No{% endif %}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+{% else %}
+  {% if puede_convocar and puntos %}
+    <section class="tarjeta">
+      <h2>Convocar</h2>
+      <p class="vacio">Cita a los titulares actuales de los inmuebles y envía la convocatoria
+        por email a los que tienen email. Después ya no se puede cambiar.
+        {% if fecha_minima %}R-JUN-02: citando hoy, una junta ordinaria no puede ser antes del {{ fecha_minima|date:"j/n/Y" }}.{% endif %}</p>
+      <form method="post" class="emitir" action="{% url 'juntas:convocar_junta' comunidad.pk junta.pk %}">
+        {% csrf_token %}
+        <label for="citacion">Fecha de la citación</label>
+        <input type="date" id="citacion" name="citacion" value="{{ hoy|date:'Y-m-d' }}" required>
+        <button type="submit">Convocar y enviar</button>
+      </form>
+    </section>
+  {% endif %}
+{% endif %}
+
+<section class="tarjeta">
+  <h2>{% if junta.esta_convocada %}Convocatoria enviada{% else %}Vista previa de la convocatoria{% endif %}</h2>
+  <pre class="convocatoria">{{ texto }}</pre>
+</section>
+{% endblock %}

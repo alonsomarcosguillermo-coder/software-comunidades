@@ -144,7 +144,15 @@ tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizad
   la devolución (los periodos "cobrado → devuelto" cuentan como pagados). ADR 012.
 
 ## Fase 4 — Juntas
-- ⬜ **T4.1** Convocatoria (orden del día, plazos `R-JUN-02`, envío por email).
+- ✅ **T4.1** Convocatoria (orden del día, plazos `R-JUN-02`, envío por email).
+  Hecho: app `juntas` con `Junta`, `PuntoOrden` (mayoría y excepción R-MAY-05 por punto) y
+  `Citacion`. Plazos puros en `juntas.servicios` (R-JUN-02 en días completos, R-JUN-03
+  media hora). `juntas.convocatoria.convocar`: cita a los titulares del día, relación de
+  morosos del art. 16.2 (con `cobros.deudas`, T3.4), un email por propietario (plantilla
+  `convocatoria.txt`) y lista de quienes no tienen email; convocada = inmutable. Web: lista,
+  preparar/editar con formset del orden del día, detalle con vista previa y "Convocar".
+  `EMAIL_BACKEND` por consola en desarrollo. Admin. `cargar_demo`: junta en borrador a 3
+  semanas. Interpretaciones en DOMINIO.md (BOE consultado). ADR 013.
 - ⬜ **T4.2** Servicio puro de cálculo de mayorías `R-MAY-01..05`, `R-VOT-01`. Muchos tests.
 - ⬜ **T4.3** Registro de asistencia y votos; borrador de acta.
 
@@ -229,3 +237,9 @@ tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizad
   cobros fuera de la conciliación, el informe y el saldo contable podrían no coincidir.
 - Morosidad: la página de morosos no tiene paginación ni búsqueda de inmuebles; el informe
   se calcula en Python con todos los recibos vencidos de la comunidad (bien para cientos).
+- Juntas: el envío de emails va dentro de la transacción de `convocar`; si el SMTP falla a
+  medias, la junta queda sin convocar aunque algunos emails hayan salido. Con volumen real,
+  una cola de envíos. Sin registro de citaciones por tablón o domicilio, ni acuse de recibo.
+- Juntas: R-JUN-01 (una ordinaria al año) no se avisa. El formset del orden del día solo
+  añade 3 filas por guardado y no permite reordenar arrastrando.
+- Juntas: revisar con protección de datos el envío por email de la relación de morosos.

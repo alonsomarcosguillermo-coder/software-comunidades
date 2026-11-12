@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block titulo %}{% if junta %}Editar junta{% else %}Nueva junta{% endif %} · {{ comunidad.nombre }}{% endblock %}
+
+{% block contenido %}
+<p class="migas"><a href="{% url 'fincas:lista_comunidades' %}">Comunidades</a> ›
+  <a href="{% url 'cobros:presupuestos_comunidad' comunidad.pk %}">{{ comunidad.nombre }}</a> ›
+  <a href="{% url 'juntas:juntas_comunidad' comunidad.pk %}">Juntas</a> ›
+  {% if junta %}Editar{% else %}Nueva{% endif %}</p>
+<h1>{% if junta %}Editar la junta{% else %}Preparar una junta{% endif %}</h1>
+
+<form method="post" class="formulario">
+  {% csrf_token %}
+  <section class="tarjeta">
+    <h2>Fecha y lugar</h2>
+    {{ formulario.non_field_errors }}
+    {% for campo in formulario %}
+      <p>
+        {{ campo.label_tag }} {{ campo }}
+        {% if campo.help_text %}<br><span class="vacio">{{ campo.help_text }}</span>{% endif %}
+        {% for error in campo.errors %}<br><span class="error">{{ error }}</span>{% endfor %}
+      </p>
+    {% endfor %}
+    <p class="vacio">R-JUN-03: la segunda convocatoria es en el mismo lugar, al menos media
+      hora después de la primera.</p>
+  </section>
+
+  <section class="tarjeta">
+    <h2>Orden del día</h2>
+    <p class="vacio">Un punto por fila, en el orden en que se tratarán. Las filas vacías se
+      ignoran. Guarda para añadir más filas.</p>
+    {{ puntos.management_form }}
+    {{ puntos.non_form_errors }}
+    <table class="tabla">
+      <thead><tr><th>Asunto</th><th>Detalle</th><th>Mayoría</th><th>Excepción 17.8</th><th>Quitar</th></tr></thead>
+      <tbody>
+        {% for punto in puntos %}
+          <tr>
+            <td>{{ punto.titulo }}{% for error in punto.titulo.errors %}<br><span class="error">{{ error }}</span>{% endfor %}</td>
+            <td>{{ punto.descripcion }}</td>
+            <td>{{ punto.mayoria }}</td>
+            <td>{{ punto.excepcion_ausentes }}</td>
+            <td>{{ punto.DELETE }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  <p><button type="submit">Guardar borrador</button></p>
+</form>
+{% endblock %}

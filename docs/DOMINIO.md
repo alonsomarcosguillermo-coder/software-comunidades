@@ -58,6 +58,28 @@ Interpretación aplicada en T2.1 (pendiente de validar con un profesional):
 - **R-JUN-04** ⚠️ Juntas y votaciones telemáticas: permitidas tras la reforma de 2022 bajo ciertas
   condiciones. Requisitos exactos pendientes de documentar antes de la Fase 4.
 
+Interpretación aplicada en T4.1 (texto consolidado de la LPH en el BOE, actualizado el
+03/10/2026; pendiente de validar con un profesional):
+- R-JUN-02: "con seis días de antelación" se cuenta en días naturales completos entre la
+  citación y la junta, sin contar ninguno de los dos (citada el día 1, junta el 8 o después).
+  Es la lectura más prudente. Pregunta: ¿basta con 6 días contando el de la junta?
+- R-JUN-02: para la extraordinaria la ley pide "la antelación que sea posible para que pueda
+  llegar a conocimiento de todos los interesados" (art. 16.3); el sistema solo exige que sea
+  un día posterior a la citación.
+- R-JUN-03: en primera convocatoria hace falta que asistan la mayoría de los propietarios que
+  representen a su vez la mayoría de las cuotas; si no, segunda convocatoria sin quórum, en el
+  mismo lugar, y puede ser el mismo día si ha pasado media hora (art. 16.2).
+- La convocatoria la hace el presidente (o los promotores) e indica asuntos, lugar, día y hora
+  (art. 16.2).
+- Art. 16.2: la convocatoria debe incluir la relación de propietarios que no estén al
+  corriente de pago y advertir de la privación del voto (R-VOT-01). Se calcula el día de la
+  citación con el informe de morosos de T3.4. Pregunta: encaje con protección de datos al
+  enviarla por email.
+- Se cita a todos los titulares (y cotitulares) el día de la citación. La forma de citar es
+  la del art. 9 (domicilio comunicado, el propio piso o el tablón): el sistema envía email a
+  quien lo tiene y lista a los demás para citarlos a mano.
+- R-JUN-04 (telemáticas) sigue sin documentar: la v1 no las contempla.
+
 ## Morosidad
 - **R-DEU-01** ⚠️ En la venta de un inmueble, el vendedor debe aportar certificado de la comunidad
   sobre el estado de deudas (art. 9.1.e LPH). El sistema genera ese certificado.

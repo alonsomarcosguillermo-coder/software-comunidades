@@ -31,6 +31,7 @@ from fincas.models import (
     Propietario,
     Titularidad,
 )
+from juntas.models import Junta, PuntoOrden
 
 MODELOS = [
     Despacho,
@@ -55,6 +56,8 @@ MODELOS = [
     Recibo,
     Extracto,
     Movimiento,
+    Junta,
+    PuntoOrden,
 ]
 
 
@@ -282,3 +285,29 @@ def test_permisos_de_extractos(demo):
     assert admin.has_perm("bancos.add_conciliacion")
     assert admin.has_perm("bancos.delete_conciliacion")
     assert not empleado.has_perm("bancos.add_conciliacion")
+
+
+@pytest.mark.django_db
+def test_la_demo_tiene_una_junta_en_borrador_que_se_puede_convocar_hoy(demo):
+    """T4.1: R-JUN-02 se cumple citando hoy; se cita a los titulares y se envían emails."""
+    from django.core import mail
+    from django.utils import timezone
+
+    from juntas.convocatoria import convocar
+
+    junta = Junta.objects.get()
+    assert not junta.esta_convocada
+    assert junta.puntos.count() == 4
+    resultado = convocar(junta, timezone.localdate())
+    assert resultado.enviadas
+    assert len(mail.outbox) == len(resultado.enviadas)
+
+
+@pytest.mark.django_db
+def test_permisos_de_juntas(demo):
+    admin = authenticate(username="admin.alfa", password=CLAVE_DEMO)
+    empleado = authenticate(username="empleado.alfa", password=CLAVE_DEMO)
+    assert admin.has_perm("juntas.add_junta")
+    assert admin.has_perm("juntas.add_citacion")
+    assert empleado.has_perm("juntas.view_junta")
+    assert not empleado.has_perm("juntas.add_citacion")

@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     "contabilidad",
     "cobros",
     "bancos",
+    "juntas",
 ]
 
 MIDDLEWARE = [
@@ -105,6 +106,19 @@ AUTH_PASSWORD_VALIDATORS = [
 # --- Idioma y zona horaria ---------------------------------------------------
 LANGUAGE_CODE = "es-es"
 TIME_ZONE = "Europe/Madrid"
+
+# --- Email (T4.1: convocatorias de junta) -------------------------------------------------
+# En desarrollo, los emails se escriben en la consola del servidor en vez de enviarse. Para
+# enviarlos de verdad: DJANGO_EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend y
+# las variables EMAIL_HOST, EMAIL_PORT, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD. En los tests,
+# Django usa siempre un buzón en memoria (django.core.mail.outbox).
+EMAIL_BACKEND = env("DJANGO_EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
+EMAIL_HOST = env("EMAIL_HOST", "localhost")
+EMAIL_PORT = int(env("EMAIL_PORT", "25"))
+EMAIL_HOST_USER = env("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = env("EMAIL_USE_TLS", "0") == "1"
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", "comunidades@example.com")
 USE_I18N = True
 USE_TZ = True
 

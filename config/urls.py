@@ -12,5 +12,6 @@ urlpatterns = [
     path("comunidades/", include("fincas.urls")),
     path("comunidades/", include("cobros.urls")),
     path("comunidades/", include("bancos.urls")),
+    path("comunidades/", include("juntas.urls")),
     path("admin/", admin.site.urls),
 ]

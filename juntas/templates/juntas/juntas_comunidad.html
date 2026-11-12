@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block titulo %}Juntas · {{ comunidad.nombre }}{% endblock %}
+
+{% block contenido %}
+<p class="migas"><a href="{% url 'fincas:lista_comunidades' %}">Comunidades</a> ›
+  <a href="{% url 'cobros:presupuestos_comunidad' comunidad.pk %}">{{ comunidad.nombre }}</a> › Juntas</p>
+<div class="titulo-seccion">
+  <h1>Juntas de {{ comunidad.nombre }}</h1>
+  {% if puede_crear %}<a href="{% url 'juntas:nueva_junta' comunidad.pk %}">Preparar una junta</a>{% endif %}
+</div>
+
+<section class="tarjeta">
+  {% if juntas %}
+    <table class="tabla">
+      <thead><tr><th>Fecha</th><th>Tipo</th><th>Lugar</th><th class="num">Puntos</th><th>Estado</th></tr></thead>
+      <tbody>
+        {% for junta in juntas %}
+          <tr>
+            <td><a href="{% url 'juntas:detalle_junta' comunidad.pk junta.pk %}">{{ junta.primera_convocatoria|date:"j/n/Y H:i" }}</a></td>
+            <td>{{ junta.get_tipo_display }}</td>
+            <td>{{ junta.lugar }}</td>
+            <td class="num">{{ junta.puntos.all|length }}</td>
+            <td>
+              {% if junta.esta_convocada %}
+                <span class="estado ok">Convocada el {{ junta.convocada_el|date:"j/n/Y" }}</span>
+              {% else %}
+                <span class="estado">Borrador</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="vacio">Todavía no hay juntas. La ordinaria se celebra al menos una vez al año
+      (R-JUN-01).</p>
+  {% endif %}
+</section>
+{% endblock %}

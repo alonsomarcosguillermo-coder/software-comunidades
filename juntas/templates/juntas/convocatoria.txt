@@ -1,0 +1,24 @@
+{% autoescape off %}{{ junta.comunidad.nombre|upper }}
+{% if junta.comunidad.direccion %}{{ junta.comunidad.direccion }}
+{% endif %}
+CONVOCATORIA DE JUNTA {{ junta.get_tipo_display|upper }} DE PROPIETARIOS
+
+{{ junta.convoca }} convoca a los propietarios a la junta {{ junta.get_tipo_display|lower }} que se celebrará en {{ junta.lugar }}:
+
+- Primera convocatoria: {{ junta.primera_convocatoria|date:"l j \d\e F \d\e Y, \a \l\a\s H:i" }}.
+{% if junta.segunda_convocatoria %}- Segunda convocatoria: {{ junta.segunda_convocatoria|date:"l j \d\e F \d\e Y, \a \l\a\s H:i" }}, en el mismo lugar.
+{% endif %}
+ORDEN DEL DÍA
+{% for punto in puntos %}
+{{ punto.orden }}. {{ punto.titulo }}{% if punto.descripcion %}
+   {{ punto.descripcion }}{% endif %}{% endfor %}
+
+{% if morosos %}PROPIETARIOS QUE NO ESTÁN AL CORRIENTE DE PAGO (art. 16.2 LPH)
+{% for nombre in morosos %}- {{ nombre }}
+{% endfor %}
+Si en el momento de iniciarse la junta no están al corriente en el pago de las deudas vencidas con la comunidad, y no las han impugnado judicialmente ni consignado, podrán participar en las deliberaciones pero no votar (art. 15.2 LPH).
+
+{% endif %}Puede asistir personalmente o representado por otra persona con un escrito firmado (art. 15.1 LPH).
+
+En {{ junta.comunidad.nombre }}, a {{ junta.convocada_el|date:"j \d\e F \d\e Y" }}.
+{% endautoescape %}

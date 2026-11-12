@@ -9,13 +9,14 @@ DEBUG activo, para no crear nunca usuarios con una clave conocida en producción
 """
 
 import calendar
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 from django.conf import settings
 from django.contrib.auth.models import Group, Permission
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
+from django.utils import timezone
 
 from bancos.importacion import importar_norma43
 from bancos.norma43 import ExtractoCuenta, cuenta_de_iban, escribir_norma43
@@ -38,6 +39,7 @@ from fincas.models import (
     Titularidad,
 )
 from fincas.servicios import comprobar_coeficientes
+from juntas.models import Junta, PuntoOrden
 
 CLAVE_DEMO = "demo-comunidades-2026"
 
@@ -82,6 +84,10 @@ GRUPOS = {
         "bancos.delete_conciliacion",
         "bancos.view_cobrorecibo",
         "bancos.view_devolucion",
+        *_todos("juntas", "junta"),
+        *_todos("juntas", "puntoorden"),
+        "juntas.view_citacion",
+        "juntas.add_citacion",
     ],
     "Empleado del despacho": [
         "fincas.view_comunidad",
@@ -111,6 +117,9 @@ GRUPOS = {
         "bancos.view_conciliacion",
         "bancos.view_cobrorecibo",
         "bancos.view_devolucion",
+        "juntas.view_junta",
+        "juntas.view_puntoorden",
+        "juntas.view_citacion",
     ],
     "Vecino": [],  # el portal del vecino llega en la Fase 5
 }
@@ -235,6 +244,13 @@ IBAN_COBROS_DEMO = construir_iban("ES", "99990000" + "100000000001")
 # Propietarios de la comunidad con contabilidad que han firmado un mandato SEPA.
 MANDATOS = ["Carmen Ejemplo", "Pablo Prueba", "Jorge Ficticio"]
 # T3.1 — Sin mandato: paga sus recibos por transferencia (aparece en el extracto de demo).
+# T4.1 — Orden del día de la junta de demo: (asunto, mayoría).
+JUNTA_DEMO = [
+    ("Aprobación de las cuentas del ejercicio", PuntoOrden.Mayoria.SIMPLE),
+    ("Presupuesto del próximo ejercicio y fondo de reserva", PuntoOrden.Mayoria.SIMPLE),
+    ("Contratación de un servicio de conserjería", PuntoOrden.Mayoria.TRES_QUINTOS),
+    ("Ruegos y preguntas", PuntoOrden.Mayoria.SIN_VOTACION),
+]
 SIN_MANDATO_PAGA_POR_TRANSFERENCIA = "Marta Inventada"
 
 
@@ -265,6 +281,7 @@ class Command(BaseCommand):
             self._derramas()
             self._recibos()
             self._extractos()
+            self._juntas()
 
         self.stdout.write(self.style.SUCCESS("Datos de demo cargados."))
         self.stdout.write(f"Usuarios (clave «{CLAVE_DEMO}» si se acaban de crear):")
@@ -454,6 +471,25 @@ class Command(BaseCommand):
                 },
             )
         generar_recibos(comunidad)  # solo crea los que falten
+
+    def _juntas(self):
+        """T4.1 — Una junta ordinaria en borrador dentro de tres semanas, para convocarla
+        desde la web (cumple R-JUN-02 si se cita hoy)."""
+        comunidad = Comunidad.objects.get(nombre=COMUNIDAD_CON_CONTABILIDAD)
+        if comunidad.juntas.exists():
+            return  # idempotente
+        dia = timezone.localdate() + timedelta(days=21)
+        primera = timezone.make_aware(datetime(dia.year, dia.month, dia.day, 19, 0))
+        junta = Junta.objects.create(
+            comunidad=comunidad,
+            tipo=Junta.Tipo.ORDINARIA,
+            primera_convocatoria=primera,
+            segunda_convocatoria=primera + timedelta(minutes=30),
+            lugar="el portal del edificio",
+            convoca="La presidenta, Carmen Ejemplo",
+        )
+        for orden, (titulo, mayoria) in enumerate(JUNTA_DEMO, start=1):
+            PuntoOrden.objects.create(junta=junta, orden=orden, titulo=titulo, mayoria=mayoria)
 
     def _extractos(self):
         """T3.1 — Un extracto Norma 43 del mes del primer vencimiento, generado aquí mismo.
