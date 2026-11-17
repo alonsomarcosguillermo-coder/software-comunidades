@@ -185,11 +185,13 @@ tarea + `pytest` en verde + `ruff check` sin errores + `docs/PLAN.md` actualizad
   notificados y el plazo de 30 días, y comunica "No estoy de acuerdo" en los puntos que
   computan ausentes. `Discrepancia` guarda canal y hora de recepción; acuse por email como
   justificante. `portal.discrepancias` sobre `registrar_discrepancia` (T4.3). ADR 017.
-- 🔄 **T5.3** GitHub + CI (GitHub Actions con PostgreSQL de servicio).
+- ✅ **T5.3** GitHub + CI (GitHub Actions con PostgreSQL de servicio).
   Hecho: `.github/workflows/ci.yml` (push y pull request; PostgreSQL 16 de servicio; ruff
   check, ruff format --check, makemigrations --check, pytest; DEBUG desactivado); ruff con
-  versión fija; probado en local con las mismas variables; README y ADR 018.
-  Falta: crear el repositorio en GitHub, subir el código y ver la primera ejecución en verde.
+  versión fija; README (con insignia de estado) y ADR 018. Código en
+  github.com/alonsomarcosguillermo-coder/software-comunidades (público; solo `main`). Los
+  commits usan el email noreply de GitHub (el historial se reescribió antes de la primera
+  subida). Primera ejecución de la CI en verde.
 
 ## Fase 6 — Preparar el uso real
 - ⬜ **T6.1** Alta de comunidades por web: comunidad, inmuebles con coeficientes (R-COEF-01

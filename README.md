@@ -1,5 +1,7 @@
 # Comunidades
 
+[![CI](https://github.com/alonsomarcosguillermo-coder/software-comunidades/actions/workflows/ci.yml/badge.svg)](https://github.com/alonsomarcosguillermo-coder/software-comunidades/actions/workflows/ci.yml)
+
 Gestión de comunidades de vecinos para administradores de fincas (proyecto de aprendizaje).
 Django + HTMX + PostgreSQL. Ver `docs/SPEC.md` y `docs/PLAN.md`.
 
