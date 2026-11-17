@@ -1,0 +1,74 @@
+# Integración continua (T5.3): en cada push y en cada pull request, GitHub arranca una
+# máquina Linux limpia, instala el proyecto y comprueba lo mismo que pide CLAUDE.md antes de
+# dar una tarea por terminada: lint, formato, migraciones al día y todos los tests contra un
+# PostgreSQL 16 de verdad (el mismo motor que en desarrollo, no SQLite).
+name: CI
+
+on:
+  push:
+  pull_request:
+
+# Si llegan dos pushes seguidos a la misma rama, se cancela la ejecución anterior.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # Un PostgreSQL 16 de usar y tirar, solo para esta ejecución (como el de docker-compose).
+    services:
+      db:
+        image: postgres:16
+        env:
+          POSTGRES_DB: comunidades
+          POSTGRES_USER: comunidades
+          POSTGRES_PASSWORD: comunidades
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U comunidades"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    # Las mismas variables que lee config/settings.py. Ninguna es secreta: son de pruebas.
+    env:
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: comunidades
+      POSTGRES_USER: comunidades
+      POSTGRES_PASSWORD: comunidades
+      DJANGO_SECRET_KEY: solo-para-la-ci
+      DJANGO_DEBUG: "0"
+
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Instalar Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip  # reutiliza las descargas de pip entre ejecuciones
+
+      - name: Instalar dependencias
+        run: python -m pip install -r requirements.txt
+
+      - name: Lint (ruff check)
+        run: ruff check .
+
+      - name: Formato (ruff format --check)
+        run: ruff format --check .
+
+      - name: Migraciones al día
+        # Falla si algún modelo ha cambiado y falta su migración.
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: Tests (pytest)
+        run: python -m pytest

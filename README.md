@@ -27,3 +27,9 @@ docker compose up -d db
 .venv\Scripts\python.exe -m pytest
 .venv\Scripts\ruff.exe check .
 ```
+
+## Integración continua
+En GitHub, cada push y cada pull request lanzan `.github/workflows/ci.yml`: con un
+PostgreSQL 16 de pruebas, comprueba `ruff check`, `ruff format --check`, que no falte ninguna
+migración y todos los tests. El resultado se ve en la pestaña **Actions** del repositorio
+(verde = todo bien). Ver ADR 018.

@@ -8,4 +8,5 @@ reportlab>=4.2          # PDF: informe de morosos y certificado de deuda (T3.4)
 pytest>=8               # Tests
 pytest-django>=4.9      # Integración de pytest con Django (base de datos de test, cliente web)
 hypothesis>=6.100       # Tests basados en propiedades (genera muchos casos aleatorios)
-ruff>=0.6               # Linter y formateador
+ruff==0.17.4            # Linter y formateador. Versión fija: otra podría formatear distinto
+                        # y hacer fallar la CI aunque en local pase (T5.3).
